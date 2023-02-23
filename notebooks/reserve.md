@@ -67,6 +67,8 @@ After running the cell below you will get a dropdown which consist of all the fl
 
 ::: {.cell .code}
 ```python
+import chi.server
+import ipywidgets as widgets
 flavor = 'm1.tiny'
 print('Available flavors')
 drop_down = widgets.Dropdown(options=[i.name for i in chi.server.list_flavors()],
