@@ -354,29 +354,29 @@ To securely transfer files between a local and a remote host, we will use the co
 
 ``` python
 
-print(f'scp -i <key path> cc@{reserved_fip}:<file path> "<local path>"')
+print(f'scp cc@{reserved_fip}:file_path "local_path"')
 ```
 
 ### Transfering a folder to remote host from local
 
 ``` python
 
-print(f'scp -r -i <key path> cc@{reserved_fip}:<folder path> "<local path>"')
+print(f'scp -r cc@{reserved_fip}:folder_path "local_path"')
 ```
 
 ### Transfering a file to local from remote host
 
 ``` python
-print(f'scp  -i <key path> "<local path>" cc@{reserved_fip}:<file path> ')
+print(f'scp "local_path" cc@{reserved_fip}:file_path ')
 ```
 
 ### Transfering a folder to local from remote host
 
 ``` python
-print(f'scp -r -i <key path> "<local path>" cc@{reserved_fip}:<folder path> ')
+print(f'scp -r "local_path" cc@{reserved_fip}:folder_path ')
 ```
 
--i "key_path" is needed only if your Chameleon key is not in the default location
+Use -i "key_path" if your Chameleon key is not in the default location
 
 ## Exercise: delete resources
 

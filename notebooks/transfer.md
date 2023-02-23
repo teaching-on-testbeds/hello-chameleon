@@ -15,7 +15,7 @@ To securely transfer files between a local and a remote host, we will use the co
 ::: {.cell .code}
 ```python
 
-print(f'scp -i <key path> cc@{reserved_fip}:<file path> "<local path>"')
+print(f'scp cc@{reserved_fip}:file_path "local_path"')
 
 ```
 :::
@@ -29,7 +29,7 @@ print(f'scp -i <key path> cc@{reserved_fip}:<file path> "<local path>"')
 ::: {.cell .code}
 ```python
 
-print(f'scp -r -i <key path> cc@{reserved_fip}:<folder path> "<local path>"')
+print(f'scp -r cc@{reserved_fip}:folder_path "local_path"')
 
 ```
 :::
@@ -42,7 +42,7 @@ print(f'scp -r -i <key path> cc@{reserved_fip}:<folder path> "<local path>"')
 
 ::: {.cell .code}
 ```python
-print(f'scp  -i <key path> "<local path>" cc@{reserved_fip}:<file path> ')
+print(f'scp "local_path" cc@{reserved_fip}:file_path ')
 
 ```
 :::
@@ -55,13 +55,13 @@ print(f'scp  -i <key path> "<local path>" cc@{reserved_fip}:<file path> ')
 
 ::: {.cell .code}
 ```python
-print(f'scp -r -i <key path> "<local path>" cc@{reserved_fip}:<folder path> ')
+print(f'scp -r "local_path" cc@{reserved_fip}:folder_path ')
 ```
 :::
 
 ::: {.cell .markdown}
 
--i "key_path" is needed only if your Chameleon key is not in the default location
+Use -i "key_path" if your Chameleon key is not in the default location
 
 :::
 
