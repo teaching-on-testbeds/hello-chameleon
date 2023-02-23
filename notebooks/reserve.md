@@ -1,7 +1,7 @@
 
 
 ::: {.cell .markdown}
-### Exercise: reserve resources
+## Exercise: reserve resources
 
 Whenever you run an experiment on Chameleon, you will
 
@@ -79,7 +79,7 @@ def dropdown_handler(change):
     flavor = change.new  
 drop_down.observe(dropdown_handler, names='value')
 display(drop_down)
-)
+
 ```
 :::
 
@@ -126,6 +126,31 @@ By default, all external connections to your VM are blocked. Therefore, to enabl
 
 It's important to note that in almost all cases, the "Allow SSH" security group is the ONLY group that you need to assign to your VM.
 
+The cell below make sure that there is an Allow SSH security group created, if there is no such groups it creates one.
+
+:::
+
+::: {.cell .code}
+```python
+%%bash
+export OS_AUTH_URL=https://kvm.tacc.chameleoncloud.org:5000/v3
+export OS_REGION_NAME="KVM@TACC"
+export OS_PROJECT_NAME="CHI-231095"
+
+access_token=$(curl -s -H"authorization: token $JUPYTERHUB_API_TOKEN"     "$JUPYTERHUB_API_URL/users/$JUPYTERHUB_USER"     | jq -r .auth_state.access_token)
+export OS_ACCESS_TOKEN="$access_token"
+SECURITY_GROUP_NAME="Allow SSH"
+
+if ! openstack security group show $SECURITY_GROUP_NAME > /dev/null 2>&1; then
+    openstack security group create $SECURITY_GROUP_NAME  --description "Enable SSH traffic on TCP port 22"
+    openstack security group rule create $SECURITY_GROUP_NAME \
+     --protocol tcp --dst-port 22:22 --remote-ip 0.0.0.0/0
+
+
+else
+    echo "Security group already exists"
+fi
+```
 :::
 
 ::: {.cell .code}

@@ -167,7 +167,7 @@ If you are prompted about a choice of kernel, you can accept the Python3 kernel.
 
 Then, you can continue this tutorial by executing the cells in the notebook directly in this Jupyter environment.
 
-### Exercise: reserve resources
+## Exercise: reserve resources
 
 Whenever you run an experiment on Chameleon, you will
 
@@ -179,27 +179,216 @@ Also, when you finish an experiment and have saved all the data somewhere safe, 
 
 In this exercise, we will reserve a resource on Chameleon.
 
+### Generating a Virtual Machine on chameleon
+
+The below cells will take project_name and exp_name as input from the user to configure the experiment environment.
+
 ``` python
+import chi,os
+project_name = input("Enter your project name")
+chi.set("project_name", "CHI-231095")  # Please change this to your project name (CH-XXXXXX)
+chi.use_site("KVM@TACC")
 ```
 
-### Exercise: log in to resources and execute commands
-
 ``` python
+exp_name = input("Enter your experiment name here")
+user = os.getenv("USER")
+server_name = f"{user}_{exp_name}"
+image_name = "CC-Ubuntu20.04"
 ```
 
-### Exercise: transfer files to and from resources
+### Flavors
+
+While Chameleon bare-metal is limited to a single "flavor" of baremetal, KVM offers virtualized hardware which provides us with the flexibility to choose from various configurations to meet our specific needs, while minimizing the impact on our allocation quota.
+
+As of writing this, there are currently **7** flavors available:
+
+  Name          VCPUs   RAM      Total Disk
+  ------------- ------- -------- ------------
+  m1.tiny       1       512 MB   1 GB
+  m1.small      1       2 GB     20 GB
+  m1.medium     2       4 GB     40 GB
+  m1.large      4       8 GB     40 GB
+  m1.xlarge     8       16 GB    40 GB
+  m1.xxlarge    16      32 GB    40 GB
+  m1.xxxlarge   16      64 GB    40 GB
+
+Also, The number of flavors assigned to a project depends on the specific project.
+
+### Selecting Flavors
+
+After running the cell below you will get a dropdown which consist of all the flavors assigned to your project. you can select one of the flavor which you feel will be sufficient for your experiment.
 
 ``` python
+import chi.server
+import ipywidgets as widgets
+flavor = 'm1.tiny'
+print('Available flavors')
+drop_down = widgets.Dropdown(options=[i.name for i in chi.server.list_flavors()],
+                                disabled=False)
+
+def dropdown_handler(change):
+    global flavor
+    flavor = change.new  
+drop_down.observe(dropdown_handler, names='value')
+display(drop_down)
 ```
 
-### Exercise: extend a lease
+### Creating the server
 
 ``` python
+import chi.server
+
+server = chi.server.create_server(server_name, 
+                                  image_name=image_name, 
+                                  flavor_name=flavor)
+
+server_id = server.id
+chi.server.wait_for_active(server_id)
 ```
 
-### Exercise: delete resources
+### Attaching a floating IP
+
+At KVM@TACC, since there are no reservations, we can easily obtain a floating IP address from the available pool without any prior booking. However, it's crucial to keep in mind that the pool of floating IPs is limited. Therefore, it's advisable to be mindful of your usage and not allocate more floating IPs than necessary, considering the other researchers who also need to utilize them.
+
+In case you require multiple VMs for your experiment, a practical approach is to connect them all on one network. By doing so, you can use a single floating IP to link to a "head" node and access all the other nodes through it.
 
 ``` python
+floating_ip = chi.server.associate_floating_ip(server_id)
+floating_ip
+```
+
+### Security groups
+
+The KVM cloud has a distinctive feature in the form of security groups, which are firewall rules that can be configured through OpenStack and the Horizon dashboard. They offer a hassle-free approach to configure the security of your VM. Although these groups also exist in the bare-metal cloud, they don't serve any purpose there.
+
+By default, all external connections to your VM are blocked. Therefore, to enable remote connections, you will need to assign the "Allow SSH" security group to your VM, which can be found by viewing the list of available groups.
+
+It's important to note that in almost all cases, the "Allow SSH" security group is the ONLY group that you need to assign to your VM.
+
+The cell below make sure that there is an Allow SSH security group created, if there is no such groups it creates one.
+
+``` python
+%%bash
+export OS_AUTH_URL=https://kvm.tacc.chameleoncloud.org:5000/v3
+export OS_REGION_NAME="KVM@TACC"
+export OS_PROJECT_NAME="CHI-231095"
+
+access_token=$(curl -s -H"authorization: token $JUPYTERHUB_API_TOKEN"     "$JUPYTERHUB_API_URL/users/$JUPYTERHUB_USER"     | jq -r .auth_state.access_token)
+export OS_ACCESS_TOKEN="$access_token"
+SECURITY_GROUP_NAME="Allow SSH"
+
+if ! openstack security group show $SECURITY_GROUP_NAME > /dev/null 2>&1; then
+    openstack security group create $SECURITY_GROUP_NAME  --description "Enable SSH traffic on TCP port 22"
+    openstack security group rule create $SECURITY_GROUP_NAME \
+     --protocol tcp --dst-port 22:22 --remote-ip 0.0.0.0/0
+
+
+else
+    echo "Security group already exists"
+fi
+```
+
+``` python
+nova_server = chi.nova().servers.get(server_id)
+f"current security groups: {[group.name for group in nova_server.list_security_group()]}"
+```
+
+``` python
+[group["name"] for group in chi.neutron().list_security_groups()["security_groups"] if "ssh" in group["name"].lower()]
+```
+
+``` python
+nova_server.add_security_group("Allow SSH")
+f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
+```
+
+Now our resources are reserved and ready to login through SSH
+
+## Exercise: log in to resources and execute commands
+
+### Extracting the floating ip that is attached to our server
+
+``` python
+floating_ips = chi.network.list_floating_ips()
+for ip in floating_ips:
+    if ip['fixed_ip_address'] is not None:
+        reserved_fip = ip['floating_ip_address']
+        break
+reserved_fip
+```
+
+### Logging in over SSH via the jupyter env
+
+``` python
+from chi.ssh import Remote
+
+node = Remote(reserved_fip)
+node.is_connected
+```
+
+**Executing terminal commands via notebook**
+
+``` python
+node.run('echo "Update starting"')
+node.run('sudo apt update')
+```
+
+### Logging in over SSH via local terminal
+
+In a local terminal on your own laptop, run
+
+``` python
+print('ssh -L 127.0.0.1:8888:127.0.0.1:8888 cc@' + reserved_fip) 
+```
+
+If your Chameleon key is not in the default location, you should also specify the path to your key as an argument, using -i.
+
+eg: ssh -L 127.0.0.1:8888:127.0.0.1:8888 cc@129.114.xx.xxx -i "`<path_name>`{=html}"
+
+## Exercise: transfer files to and from resources
+
+To securely transfer files between a local and a remote host, we will use the command-line tool called Secure Copy (SCP), which uses the Secure Shell (SSH) protocol for encryption and authentication. SCP provides a secure method for transferring files over a network, ensuring that data remains protected during the transfer process.
+
+### Transfering a file to remote host from local
+
+``` python
+
+print(f'scp -i <key path> cc@{reserved_fip}:<file path> "<local path>"')
+```
+
+### Transfering a folder to remote host from local
+
+``` python
+
+print(f'scp -r -i <key path> cc@{reserved_fip}:<folder path> "<local path>"')
+```
+
+### Transfering a file to local from remote host
+
+``` python
+print(f'scp  -i <key path> "<local path>" cc@{reserved_fip}:<file path> ')
+```
+
+### Transfering a folder to local from remote host
+
+``` python
+print(f'scp -r -i <key path> "<local path>" cc@{reserved_fip}:<folder path> ')
+```
+
+-i "key_path" is needed only if your Chameleon key is not in the default location
+
+## Exercise: delete resources
+
+Once you are done using the resources, you can delete them by running the cell below. provide the input as "y" if you want to delete the resource.
+
+``` python
+DELETE = input("Are you sure you want to delete? y/n")
+
+if DELETE == "y":
+    chi.server.delete_server(server_id)
+    ip_details = chi.network.get_floating_ip(reserved_fip)
+    chi.neutron().delete_floatingip(ip_details["id"])
 ```
 <hr>
 
