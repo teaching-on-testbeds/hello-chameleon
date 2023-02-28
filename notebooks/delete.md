@@ -7,9 +7,9 @@ Once you are done using the resources, you can delete them by running the cell b
 
 ::: {.cell .code}
 ```python
-DELETE = input("Are you sure you want to delete? y/n")
+DELETE = False
 
-if DELETE == "y":
+if DELETE:
     chi.server.delete_server(server_id)
     ip_details = chi.network.get_floating_ip(reserved_fip)
     chi.neutron().delete_floatingip(ip_details["id"])

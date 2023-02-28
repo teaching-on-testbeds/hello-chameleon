@@ -185,53 +185,32 @@ The below cells will take project_name and exp_name as input from the user to co
 
 ``` python
 import chi,os
-project_name = input("Enter your project name")
-chi.set("project_name", "CHI-231095")  # Please change this to your project name (CH-XXXXXX)
+project_name = "CHI-XXXXXX"
+os.environ["OS_PROJECT_NAME"] = project_name
+chi.set("project_name", project_name)  
 chi.use_site("KVM@TACC")
 ```
 
 ``` python
-exp_name = input("Enter your experiment name here")
+exp_name = ""
 user = os.getenv("USER")
-server_name = f"{user}_{exp_name}"
-image_name = "CC-Ubuntu20.04"
+server_name = f"{exp_name}_{user}"
 ```
 
-### Flavors
+### Assigning flavor and image_name
 
-While Chameleon bare-metal is limited to a single "flavor" of baremetal, KVM offers virtualized hardware which provides us with the flexibility to choose from various configurations to meet our specific needs, while minimizing the impact on our allocation quota.
-
-As of writing this, there are currently **7** flavors available:
-
-  Name          VCPUs   RAM      Total Disk
-  ------------- ------- -------- ------------
-  m1.tiny       1       512 MB   1 GB
-  m1.small      1       2 GB     20 GB
-  m1.medium     2       4 GB     40 GB
-  m1.large      4       8 GB     40 GB
-  m1.xlarge     8       16 GB    40 GB
-  m1.xxlarge    16      32 GB    40 GB
-  m1.xxxlarge   16      64 GB    40 GB
-
-Also, The number of flavors assigned to a project depends on the specific project.
-
-### Selecting Flavors
-
-After running the cell below you will get a dropdown which consist of all the flavors assigned to your project. you can select one of the flavor which you feel will be sufficient for your experiment.
+Running this cell will show tha available images that could be used in our vm.
 
 ``` python
-import chi.server
-import ipywidgets as widgets
-flavor = 'm1.tiny'
-print('Available flavors')
-drop_down = widgets.Dropdown(options=[i.name for i in chi.server.list_flavors()],
-                                disabled=False)
+%%bash
+openstack image list
+```
 
-def dropdown_handler(change):
-    global flavor
-    flavor = change.new  
-drop_down.observe(dropdown_handler, names='value')
-display(drop_down)
+Select the image which you want to use and assign it to the image_name variable in the cell below. Here we have used CC-Ubuntu20.04 but you can use different according to your need.
+
+``` python
+flavor = "m1.small"
+image_name = "CC-Ubuntu20.04"
 ```
 
 ### Creating the server
@@ -254,8 +233,8 @@ At KVM@TACC, since there are no reservations, we can easily obtain a floating IP
 In case you require multiple VMs for your experiment, a practical approach is to connect them all on one network. By doing so, you can use a single floating IP to link to a "head" node and access all the other nodes through it.
 
 ``` python
-floating_ip = chi.server.associate_floating_ip(server_id)
-floating_ip
+reserved_fip = chi.server.associate_floating_ip(server_id)
+reserved_fip
 ```
 
 ### Security groups
@@ -272,15 +251,14 @@ The cell below make sure that there is an Allow SSH security group created, if t
 %%bash
 export OS_AUTH_URL=https://kvm.tacc.chameleoncloud.org:5000/v3
 export OS_REGION_NAME="KVM@TACC"
-export OS_PROJECT_NAME="CHI-231095"
 
 access_token=$(curl -s -H"authorization: token $JUPYTERHUB_API_TOKEN"     "$JUPYTERHUB_API_URL/users/$JUPYTERHUB_USER"     | jq -r .auth_state.access_token)
 export OS_ACCESS_TOKEN="$access_token"
 SECURITY_GROUP_NAME="Allow SSH"
 
-if ! openstack security group show $SECURITY_GROUP_NAME > /dev/null 2>&1; then
-    openstack security group create $SECURITY_GROUP_NAME  --description "Enable SSH traffic on TCP port 22"
-    openstack security group rule create $SECURITY_GROUP_NAME \
+if ! openstack security group show "$SECURITY_GROUP_NAME" > /dev/null 2>&1; then
+    openstack security group create "$SECURITY_GROUP_NAME"  --description "Enable SSH traffic on TCP port 22"
+    openstack security group rule create "$SECURITY_GROUP_NAME" \
      --protocol tcp --dst-port 22:22 --remote-ip 0.0.0.0/0
 
 
@@ -291,16 +269,14 @@ fi
 
 ``` python
 nova_server = chi.nova().servers.get(server_id)
-f"current security groups: {[group.name for group in nova_server.list_security_group()]}"
-```
-
-``` python
-[group["name"] for group in chi.neutron().list_security_groups()["security_groups"] if "ssh" in group["name"].lower()]
-```
-
-``` python
 nova_server.add_security_group("Allow SSH")
 f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
+```
+
+Wait for the server to be ready to connect.
+
+``` python
+server.wait_for_tcp(reserved_fip, port=22)
 ```
 
 Now our resources are reserved and ready to login through SSH
@@ -308,15 +284,6 @@ Now our resources are reserved and ready to login through SSH
 ## Exercise: log in to resources and execute commands
 
 ### Extracting the floating ip that is attached to our server
-
-``` python
-floating_ips = chi.network.list_floating_ips()
-for ip in floating_ips:
-    if ip['fixed_ip_address'] is not None:
-        reserved_fip = ip['floating_ip_address']
-        break
-reserved_fip
-```
 
 ### Logging in over SSH via the jupyter env
 
@@ -330,8 +297,8 @@ node.is_connected
 **Executing terminal commands via notebook**
 
 ``` python
-node.run('echo "Update starting"')
-node.run('sudo apt update')
+node.run('echo "The connection is up"')
+node.run('echo "Hello how are you" > hello.txt')
 ```
 
 ### Logging in over SSH via local terminal
@@ -339,12 +306,14 @@ node.run('sudo apt update')
 In a local terminal on your own laptop, run
 
 ``` shell
-user@username:~$ ssh -L 127.0.0.1:8888:127.0.0.1:8888 cc@reserved_fip
+user@username:~$ ssh cc@129.114.xxx.xxx
 ```
 
 If your Chameleon key is not in the default location, you should also specify the path to your key as an argument, using -i.
 
-eg: ssh -L 127.0.0.1:8888:127.0.0.1:8888 cc@129.114.xx.xxx -i "`<path_name>`{=html}"
+``` shell
+eg: ssh -i ~/.ssh/id_rsa cc@129.114.xx.xxx 
+```
 
 The output of the above command will look somewhat like this.
 
@@ -373,8 +342,8 @@ cc@cp3793-nyu-edu-fount:~$
 Now we have been logged in to our remote host. we will run some commands to check the content of current directory
 
 ``` shell
-cc@cp3793-nyu-edu-fount:~$ ls
-cc@cp3793-nyu-edu-fount:~$ 
+:~$ ls
+:~$ 
 ```
 
 We can see that the root directory is empty.
@@ -382,12 +351,11 @@ We can see that the root directory is empty.
 We will create a directory named chameleon and then create a file hello.txt inside it.
 
 ``` shell
-cc@cp3793-nyu-edu-fount:~$ mkdir chameleon
-cc@cp3793-nyu-edu-fount:~$ cd chameleon
-cc@cp3793-nyu-edu-fount:~/chameleon$ 
-cc@cp3793-nyu-edu-fount:~/chameleon$ cat > hello.txt
-hello , welcome to chameleon
-c@cp3793-nyu-edu-fount:~/chameleon$ 
+:~$ mkdir chameleon
+:~$ cd chameleon
+:~/chameleon$ 
+:~/chameleon$ echo "hello Chameleon" > hello.txt
+:~/chameleon$ 
 ```
 
 We will use the file and directory created in the later exercises where we will see how transfering of file works between remote host and local host.
@@ -406,158 +374,68 @@ SCP is many times confusing, so to simplify it we can follow these rules:
 
 4.  use -i "key_path" when your key is not at the default location.
 
-Transfering the chameleon directory to local host from remote host
+5.  When you are transfering a file from a remote host to your laptop, you will run *scp* from a terminal on your laptop.(Not on a terminal that is logged into the remote host)
 
-``` shell
-user@username:~$ scp -r cc@reserved_fip:/home/cc/chameleon/ "local_path"
+### Using jupyter environment to transfer files vias *scp*
+
+When we logged in via jupyter environment we created a file named hello.txt that is on our remote host, here we will run a *scp* command to get that file from remote to our jupyter environment.
+
+``` python
+node.run("scp cc@{reserved_fip}:/home/cc/hello.txt .")
 ```
 
-Now we have chameleon directory in our local, we will try to access hello.txt file and modify it.
+Now we have hello.txt in our jupyter environment we will make some changes to it by directly opening and changing it in the jupyter environment and then transfer the same file to the remote host.
 
-``` shell
-user@username:~/chameleon$ nano hello.txt
-hello , welcome to chameleon
-
-
-
-
-
-
-
-
-
-                                                                           [ Read 1 line ]
-^G Get Help     ^O Write Out    ^W Where Is     ^K Cut Text     ^J Justify      ^C Cur Pos      M-U Undo        M-A Mark Text   M-] To Bracket  M-Q Previous
-^X Exit         ^R Read File    ^\ Replace      ^U Paste Text   ^T To Spell     ^_ Go To Line   M-E Redo        M-6 Copy Text   ^Q Where Was    M-W Next
+``` python
+node.run("scp ~/work/hello.txt cc@{reserved_fip}:/home/cc/")
 ```
 
-We modified the content of the file. we can see if the same is visible or not throught the "cat" command.
+### Transfering files through the local terminal
+
+When we logged in through our local environment on the terminal of our laptop, We created a folder "chameleon" and inside the folder we created a file "hello.txt" on the remote host. Here in this exercise we will run a *scp* command to get that file from remote host to our laptop.
 
 ``` shell
-user@username:~/chameleon$ nano hello.txt
-hello , welcome to chameleon. how are you doing ?
+user@username:~$ scp cc@reserved_fip:/home/cc/chameleon/hello.txt .
+hello.txt                       100%    1KB     0.1KB/s   00:00
 user@username:~$
 ```
 
-Let's create a new python file inside our local chameleon folder.
+Run the code below and you will get the exact command which you have to use in your local terminal
 
-``` shell
-cc@cp3793-nyu-edu-fount:~/chameleon$ cat > chi_info.py
-import chi
-#chi is Chameleon Cloud Python client library, which is a Python package used for interacting with the Chameleon Cloud API.
-print(help(chi))
-c@cp3793-nyu-edu-fount:~/chameleon$ 
+``` python
+print(f'scp cc@{reserved_fip}:/home/cc/chameleon/hello.txt .')
 ```
 
-In the next steps, first we will see how to transfer chi_info.py file to remote host and then we can try transfering the complete folder to remote.
+Now we have transfered hello.txt from remote host to our laptop. Now we can open that file edit it in any of the editor and then try transfering the same to remote host.
 
 ``` shell
-user@username:~$ scp ./chameleon/chi_info.py  cc@reserved_fip:/home/cc/chameleon/
-chi_info.py                        100%    2KB     0.1KB/s   00:00
+user@username:~$ scp hello.txt cc@reserved_fip:/home/cc/chameleon/
+hello.txt                       100%    1KB     0.1KB/s   00:00
 user@username:~$
 ```
 
-Now, open a new terminal log in through SSH and see if the same file is there or not.
-
-``` shell
-user@username:~$ ssh -L 127.0.0.1:8888:127.0.0.1:8888 cc@reserved_fip
-cc@cp3793-nyu-edu-fount:~$cd chameleon
-cc@cp3793-nyu-edu-fount:~/chameleon$ ls
-hello.txt chi_info.py
-```
-
-We can see that chi_info.py has been transfered from our local host to remote host.
-
-Next step will be first deleting a file and then deleting a directory.
-
-To delete a file we use "rm filename" command
-
-``` shell
-cc@cp3793-nyu-edu-fount:~/chameleon$ rm chi_info.py
-cc@cp3793-nyu-edu-fount:~/chameleon$ ls
-cc@cp3793-nyu-edu-fount:~/chameleon$ ls
-hello.txt
-```
-
-Next we will try deleting the complete directory.
-
-To delete a directory we use "rm -r directory" command.
-
-``` shell
-cc@cp3793-nyu-edu-fount:~/chameleon$ cd ..
-cc@cp3793-nyu-edu-fount:~/$ rm -r chameleon
-cc@cp3793-nyu-edu-fount:~/$ ls
-cc@cp3793-nyu-edu-fount:~/$
-```
-
-Now we don't have our chameleon directory.
-
-But we have the same directory in our local. So, next we will try to transfer the directory from our local to remote host.
-
-Open the local terminal in another tab.
-
-and let's use the SCP command to recursively transfer the entire chameleon directory to our remote host.
-
-``` shell
-user@username:~$ scp -r user/chameleon cc@reserved_fip:/home/cc/
-hello.txt                        100%   2.4KB/s   00:00
-chi_info.py                      100%   3KB/s   00:00
-user@username:~$
-```
-
-Let's check if directory is transfered or not.
-
-Open the other terminal where we previously logged in to remote via ssh
-
-``` shell
-cc@cp3793-nyu-edu-fount:~/$ ls
-chameleon
-cc@cp3793-nyu-edu-fount:~/$ cd chameleon
-cc@cp3793-nyu-edu-fount:~/chameleon$ ls
-hello.txt chi-info.py
-cc@cp3793-nyu-edu-fount:~/chameleon$
-```
-
-From the output above we can see that the entire directory was transfered successfully.
-
-Run the cells below and you will find the exact scp commands which you can use to perform transfer operation. just provide the path of the file in remote host and entire path of the local host.
-
-**Transfering a file to local host from remote host**
+Run the code below and you will get the exact command which you have to use in your local terminal to transfer the file back to remote host
 
 ``` python
-
-print(f'scp cc@{reserved_fip}:file_path "local_path"')
+print(f'scp hello.txt cc@{reserved_fip}:/home/cc/chameleon/')
 ```
 
-**Transfering a folder to remote host from local**
+Use -i "key_path" if your Chameleon key is not in the default location.
+
+Run the code below and you will get a similar command for transfering the file with key path when the file is not present at the default location.
 
 ``` python
-
-print(f'scp -r cc@{reserved_fip}:folder_path "local_path"')
+print(f'scp -i "~/.ssh/id_rsa_chameleon" hello.txt cc@{reserved_fip}:/home/cc/chameleon/')
 ```
-
-**Transfering a file to local from remote host**
-
-``` python
-print(f'scp "local_path" cc@{reserved_fip}:file_path ')
-```
-
-**Transfering a folder to local from remote host**
-
-``` python
-print(f'scp -r "local_path" cc@{reserved_fip}:folder_path ')
-```
-
-Use -i "key_path" if your Chameleon key is not in the default location
 
 ## Exercise: delete resources
 
 Once you are done using the resources, you can delete them by running the cell below. provide the input as "y" if you want to delete the resource.
 
 ``` python
-DELETE = input("Are you sure you want to delete? y/n")
+DELETE = False
 
-if DELETE == "y":
+if DELETE:
     chi.server.delete_server(server_id)
     ip_details = chi.network.get_floating_ip(reserved_fip)
     chi.neutron().delete_floatingip(ip_details["id"])

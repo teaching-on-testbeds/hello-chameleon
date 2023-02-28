@@ -24,61 +24,49 @@ The below cells will take project_name and exp_name as input from the user to co
 ::: {.cell .code}
 ```python
 import chi,os
-project_name = input("Enter your project name")
-chi.set("project_name", "CHI-231095")  # Please change this to your project name (CH-XXXXXX)
+project_name = "CHI-XXXXXX"
+os.environ["OS_PROJECT_NAME"] = project_name
+chi.set("project_name", project_name)  
 chi.use_site("KVM@TACC")
 ```
 :::
 
 ::: {.cell .code}
 ```python
-exp_name = input("Enter your experiment name here")
+exp_name = ""
 user = os.getenv("USER")
-server_name = f"{user}_{exp_name}"
-image_name = "CC-Ubuntu20.04"
+server_name = f"{exp_name}_{user}"
+
+```
+:::
+
+
+::: {.cell .markdown}
+### Assigning flavor and image_name
+
+
+:::
+
+::: {.cell .markdown}
+Running this cell will show tha available images that could be used in our vm.
+:::
+
+
+::: {.cell .code}
+```python
+%%bash
+openstack image list
 ```
 :::
 
 ::: {.cell .markdown}
-### Flavors
-While Chameleon bare-metal is limited to a single "flavor" of baremetal, KVM offers virtualized hardware which provides us with the flexibility to choose from various configurations to meet our specific needs, while minimizing the impact on our allocation quota.
-
-As of writing this, there are currently **7** flavors available:
-
-| Name        | VCPUs | RAM    | Total Disk |
-|-------------|-------|--------|------------|
-| m1.tiny     | 1     | 512 MB | 1 GB       |
-| m1.small    | 1     | 2 GB   | 20 GB      |
-| m1.medium   | 2     | 4 GB   | 40 GB      |
-| m1.large    | 4     | 8 GB   | 40 GB      |
-| m1.xlarge   | 8     | 16 GB  | 40 GB      |
-| m1.xxlarge  | 16    | 32 GB  | 40 GB      |
-| m1.xxxlarge | 16    | 64 GB  | 40 GB      |
-
-Also, The number of flavors assigned to a project depends on the specific project.
-
-:::
-
-::: {.cell .markdown}
-### Selecting Flavors
-After running the cell below you will get a dropdown which consist of all the flavors assigned to your project. you can select one of the flavor which you feel will be sufficient for your experiment.
-
+Select the image which you want to use and assign it to the image_name variable in the cell below. Here we have used CC-Ubuntu20.04 but you can use different according to your need.
 :::
 
 ::: {.cell .code}
 ```python
-import chi.server
-import ipywidgets as widgets
-flavor = 'm1.tiny'
-print('Available flavors')
-drop_down = widgets.Dropdown(options=[i.name for i in chi.server.list_flavors()],
-                                disabled=False)
-
-def dropdown_handler(change):
-    global flavor
-    flavor = change.new  
-drop_down.observe(dropdown_handler, names='value')
-display(drop_down)
+flavor = "m1.small"
+image_name = "CC-Ubuntu20.04"
 
 ```
 :::
@@ -112,8 +100,8 @@ In case you require multiple VMs for your experiment, a practical approach is to
 :::
 ::: {.cell .code}
 ```python
-floating_ip = chi.server.associate_floating_ip(server_id)
-floating_ip
+reserved_fip = chi.server.associate_floating_ip(server_id)
+reserved_fip
 ```
 :::
 
@@ -135,15 +123,14 @@ The cell below make sure that there is an Allow SSH security group created, if t
 %%bash
 export OS_AUTH_URL=https://kvm.tacc.chameleoncloud.org:5000/v3
 export OS_REGION_NAME="KVM@TACC"
-export OS_PROJECT_NAME="CHI-231095"
 
 access_token=$(curl -s -H"authorization: token $JUPYTERHUB_API_TOKEN"     "$JUPYTERHUB_API_URL/users/$JUPYTERHUB_USER"     | jq -r .auth_state.access_token)
 export OS_ACCESS_TOKEN="$access_token"
 SECURITY_GROUP_NAME="Allow SSH"
 
-if ! openstack security group show $SECURITY_GROUP_NAME > /dev/null 2>&1; then
-    openstack security group create $SECURITY_GROUP_NAME  --description "Enable SSH traffic on TCP port 22"
-    openstack security group rule create $SECURITY_GROUP_NAME \
+if ! openstack security group show "$SECURITY_GROUP_NAME" > /dev/null 2>&1; then
+    openstack security group create "$SECURITY_GROUP_NAME"  --description "Enable SSH traffic on TCP port 22"
+    openstack security group rule create "$SECURITY_GROUP_NAME" \
      --protocol tcp --dst-port 22:22 --remote-ip 0.0.0.0/0
 
 
@@ -156,22 +143,20 @@ fi
 ::: {.cell .code}
 ```python
 nova_server = chi.nova().servers.get(server_id)
-f"current security groups: {[group.name for group in nova_server.list_security_group()]}"
-```
-:::
-
-::: {.cell .code}
-```python
-[group["name"] for group in chi.neutron().list_security_groups()["security_groups"] if "ssh" in group["name"].lower()]
-```
-:::
-
-::: {.cell .code}
-```python
 nova_server.add_security_group("Allow SSH")
 f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
 ```
 :::
+
+Wait for the server to be ready to connect.
+
+
+::: {.cell .code}
+```python
+server.wait_for_tcp(reserved_fip, port=22)
+```
+:::
+
 
 ::: {.cell .markdown}
 

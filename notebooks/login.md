@@ -11,16 +11,6 @@
 
 :::
 
-::: {.cell .code}
-```python
-floating_ips = chi.network.list_floating_ips()
-for ip in floating_ips:
-    if ip['fixed_ip_address'] is not None:
-        reserved_fip = ip['floating_ip_address']
-        break
-reserved_fip
-```
-:::
 
 ::: {.cell .markdown}
 ### Logging in over SSH via the jupyter env
@@ -46,8 +36,8 @@ node.is_connected
 
 ::: {.cell .code}
 ```python
-node.run('echo "Update starting"')
-node.run('sudo apt update')
+node.run('echo "The connection is up"')
+node.run('echo "Hello how are you" > hello.txt')
 ```
 :::
 
@@ -61,11 +51,12 @@ In a local terminal on your own laptop, run
 
 ::: {.cell .markdown}
 ```shell
-user@username:~$ ssh -L 127.0.0.1:8888:127.0.0.1:8888 cc@reserved_fip
+user@username:~$ ssh cc@129.114.xxx.xxx
 ```
 If your Chameleon key is not in the default location, you should also specify the path to your key as an argument, using -i.
-
-eg: ssh -L 127.0.0.1:8888:127.0.0.1:8888 cc@129.114.xx.xxx -i "<path_name>"
+```shell
+eg: ssh -i ~/.ssh/id_rsa cc@129.114.xx.xxx 
+```
 :::
 
 ::: {.cell .markdown}
@@ -100,8 +91,8 @@ Now we have been logged in to our remote host.
 we will run some commands to check the content of current directory
 
 ```shell
-cc@cp3793-nyu-edu-fount:~$ ls
-cc@cp3793-nyu-edu-fount:~$ 
+:~$ ls
+:~$ 
 ```
 
 We can see that the root directory is empty.
@@ -109,12 +100,11 @@ We can see that the root directory is empty.
 We will create a directory named chameleon and then create a file hello.txt inside it.
 
 ```shell
-cc@cp3793-nyu-edu-fount:~$ mkdir chameleon
-cc@cp3793-nyu-edu-fount:~$ cd chameleon
-cc@cp3793-nyu-edu-fount:~/chameleon$ 
-cc@cp3793-nyu-edu-fount:~/chameleon$ cat > hello.txt
-hello , welcome to chameleon
-c@cp3793-nyu-edu-fount:~/chameleon$ 
+:~$ mkdir chameleon
+:~$ cd chameleon
+:~/chameleon$ 
+:~/chameleon$ echo "hello Chameleon" > hello.txt
+:~/chameleon$ 
 ```
 We will use the file and directory created in the later exercises where we will see how transfering of file works between remote host and local host.
 ::: 
