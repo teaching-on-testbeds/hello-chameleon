@@ -181,7 +181,7 @@ In this exercise, we will reserve a resource on Chameleon.
 
 ### Generating a Virtual Machine on chameleon
 
-The below cells will take project_name and exp_name as input from the user to configure the experiment environment.
+Run this cell to initialize the environment, also make sure change the vriable "project_name". project_name looks like "CHI-XXXXX" and it is the name of your project which you were assigned.
 
 ``` python
 import chi,os
@@ -191,33 +191,20 @@ chi.set("project_name", project_name)
 chi.use_site("KVM@TACC")
 ```
 
+To ensure uniqueness, each server within a project must have a distinct name. To differentiate your servers from those of your peers, the server's name should be composed of your chameleon username and an exp_name that your instructor has specified in the cell provided below.
+
 ``` python
 exp_name = ""
 user = os.getenv("USER")
 server_name = f"{exp_name}_{user}"
 ```
 
-### Assigning flavor and image_name
-
-Running this cell will show tha available images that could be used in our vm.
-
-``` python
-%%bash
-openstack image list
-```
-
-Select the image which you want to use and assign it to the image_name variable in the cell below. Here we have used CC-Ubuntu20.04 but you can use different according to your need.
-
-``` python
-flavor = "m1.small"
-image_name = "CC-Ubuntu20.04"
-```
-
 ### Creating the server
 
 ``` python
 import chi.server
-
+flavor = "m1.small"
+image_name = "CC-Ubuntu20.04"
 server = chi.server.create_server(server_name, 
                                   image_name=image_name, 
                                   flavor_name=flavor)
@@ -226,26 +213,16 @@ server_id = server.id
 chi.server.wait_for_active(server_id)
 ```
 
-### Attaching a floating IP
-
-At KVM@TACC, since there are no reservations, we can easily obtain a floating IP address from the available pool without any prior booking. However, it's crucial to keep in mind that the pool of floating IPs is limited. Therefore, it's advisable to be mindful of your usage and not allocate more floating IPs than necessary, considering the other researchers who also need to utilize them.
-
-In case you require multiple VMs for your experiment, a practical approach is to connect them all on one network. By doing so, you can use a single floating IP to link to a "head" node and access all the other nodes through it.
+Associate an IP address with this server:
 
 ``` python
 reserved_fip = chi.server.associate_floating_ip(server_id)
 reserved_fip
 ```
 
-### Security groups
+### Creating a Security group
 
-The KVM cloud has a distinctive feature in the form of security groups, which are firewall rules that can be configured through OpenStack and the Horizon dashboard. They offer a hassle-free approach to configure the security of your VM. Although these groups also exist in the bare-metal cloud, they don't serve any purpose there.
-
-By default, all external connections to your VM are blocked. Therefore, to enable remote connections, you will need to assign the "Allow SSH" security group to your VM, which can be found by viewing the list of available groups.
-
-It's important to note that in almost all cases, the "Allow SSH" security group is the ONLY group that you need to assign to your VM.
-
-The cell below make sure that there is an Allow SSH security group created, if there is no such groups it creates one.
+A security group named "Allow SSH" will be generated in the following cell for our project, enabling us to connect to the remote server from our local desktop.
 
 ``` python
 %%bash
@@ -267,6 +244,8 @@ else
 fi
 ```
 
+The preceding cell generated a security group, and this cell will attach that security group to our server, making it ready to be accessed via SSH.
+
 ``` python
 nova_server = chi.nova().servers.get(server_id)
 nova_server.add_security_group("Allow SSH")
@@ -283,37 +262,27 @@ Now our resources are reserved and ready to login through SSH
 
 ## Exercise: log in to resources and execute commands
 
-### Extracting the floating ip that is attached to our server
-
-### Logging in over SSH via the jupyter env
-
-``` python
-from chi.ssh import Remote
-
-node = Remote(reserved_fip)
-node.is_connected
-```
-
-**Executing terminal commands via notebook**
-
-``` python
-node.run('echo "The connection is up"')
-node.run('echo "Hello how are you" > hello.txt')
-```
-
 ### Logging in over SSH via local terminal
 
-In a local terminal on your own laptop, run
+Once your server is ready to use. you can follow the guidelines below to log in to your server via SSH.
 
-``` shell
-user@username:~$ ssh cc@129.114.xxx.xxx
+Run the cell below and use it's output as the exact command to login through your laptop's terminal.
+
+``` python
+
+print(f"ssh -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}")
 ```
 
-If your Chameleon key is not in the default location, you should also specify the path to your key as an argument, using -i.
+The first time you log in to each new host, your computer will display a warning similar to the following:
 
 ``` shell
-eg: ssh -i ~/.ssh/id_rsa cc@129.114.xx.xxx 
+The authenticity of host "129.114.26.xx (129.114.26.xx)" cannot be established.
+ED25519 key fingerprint is SHA256:1fcbGrgLDdOeorauhz3CTyhmFqOHsrEWlu0TZ6yGoDM.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
 ```
+
+and you will have to type the word *yes* and hit Enter to continue. If you have specified your key path and other details correctly, it won't ask you for a password when you log in to the node. (It may ask for the passphrase for your private key if you've set one.)
 
 The output of the above command will look somewhat like this.
 
@@ -339,63 +308,32 @@ Last login: Thu Feb 23 16:44:05 2023 from 100.35.242.215
 cc@cp3793-nyu-edu-fount:~$
 ```
 
-Now we have been logged in to our remote host. we will run some commands to check the content of current directory
+We will create a file hello.txt on our remote machine.
 
 ``` shell
-:~$ ls
-:~$ 
+:~$ echo "Hello from $(hostname)" > hello.txt
 ```
 
-We can see that the root directory is empty.
-
-We will create a directory named chameleon and then create a file hello.txt inside it.
-
-``` shell
-:~$ mkdir chameleon
-:~$ cd chameleon
-:~/chameleon$ 
-:~/chameleon$ echo "hello Chameleon" > hello.txt
-:~/chameleon$ 
-```
-
-We will use the file and directory created in the later exercises where we will see how transfering of file works between remote host and local host.
+Now we will use this file "hello.txt" in the later exercises where we will see how transfering of file works between remote host and local host.
 
 ## Exercise: transfer files to and from resources
 
-To securely transfer files between a local and a remote host, we will use the command-line tool called Secure Copy (SCP), which uses the Secure Shell (SSH) protocol for encryption and authentication. SCP provides a secure method for transferring files over a network, ensuring that data remains protected during the transfer process.
+While working on a remote host we have to transfer files from remote to local and vice versa. To move data back and forth between your laptop and remote system that you access with *ssh*, we can use *scp*. The syntax is:
 
-SCP is many times confusing, so to simplify it we can follow these rules:
-
-1.  The path of the file or folder which is to be transfered should always come first.
-
-2.  The path to which it has to be transfered comes after.
-
-3.  Use -r when you are trying to transfer a directory of folder.
-
-4.  use -i "key_path" when your key is not at the default location.
-
-5.  When you are transfering a file from a remote host to your laptop, you will run *scp* from a terminal on your laptop.(Not on a terminal that is logged into the remote host)
-
-### Using jupyter environment to transfer files vias *scp*
-
-When we logged in via jupyter environment we created a file named hello.txt that is on our remote host, here we will run a *scp* command to get that file from remote to our jupyter environment.
-
-``` python
-node.run("scp cc@{reserved_fip}:/home/cc/hello.txt .")
+``` shell
+scp [OPTIONS] SOURCE DESTINATION
 ```
 
-Now we have hello.txt in our jupyter environment we will make some changes to it by directly opening and changing it in the jupyter environment and then transfer the same file to the remote host.
+where SOURCE is the full address of the location where the file is currently llocated, and DESTINATION is the address of the location that you want to copy a file to.
 
-``` python
-node.run("scp ~/work/hello.txt cc@{reserved_fip}:/home/cc/")
-```
+When you are transferring a file from a remote host to your laptop, you will run scp from a terminal on your laptop (NOT a terminal that is logged in to the remote host), and the syntax will look like this:
 
 ### Transfering files through the local terminal
 
 When we logged in through our local environment on the terminal of our laptop, We created a folder "chameleon" and inside the folder we created a file "hello.txt" on the remote host. Here in this exercise we will run a *scp* command to get that file from remote host to our laptop.
 
 ``` shell
-user@username:~$ scp cc@reserved_fip:/home/cc/chameleon/hello.txt .
+user@username:~$ scp -i ~/.ssh/id_rsa_chameleon cc@reserved_fip:/home/cc/chameleon/hello.txt .
 hello.txt                       100%    1KB     0.1KB/s   00:00
 user@username:~$
 ```
@@ -403,7 +341,7 @@ user@username:~$
 Run the code below and you will get the exact command which you have to use in your local terminal
 
 ``` python
-print(f'scp cc@{reserved_fip}:/home/cc/chameleon/hello.txt .')
+print(f'scp -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}:/home/cc/chameleon/hello.txt .')
 ```
 
 Now we have transfered hello.txt from remote host to our laptop. Now we can open that file edit it in any of the editor and then try transfering the same to remote host.
@@ -417,20 +355,16 @@ user@username:~$
 Run the code below and you will get the exact command which you have to use in your local terminal to transfer the file back to remote host
 
 ``` python
-print(f'scp hello.txt cc@{reserved_fip}:/home/cc/chameleon/')
+print(f'scp -i ~/.ssh/id_rsa_chameleon hello.txt cc@{reserved_fip}:/home/cc/chameleon/')
 ```
 
-Use -i "key_path" if your Chameleon key is not in the default location.
-
-Run the code below and you will get a similar command for transfering the file with key path when the file is not present at the default location.
-
-``` python
-print(f'scp -i "~/.ssh/id_rsa_chameleon" hello.txt cc@{reserved_fip}:/home/cc/chameleon/')
-```
+Use of `-i ~/.ssh/id_rsa_chameleon` is optional if your Chameleon key is in the default location.
 
 ## Exercise: delete resources
 
-Once you are done using the resources, you can delete them by running the cell below. provide the input as "y" if you want to delete the resource.
+Once you are done using the resources, you can delete them by changing DELETE = True and run the cell below.
+
+Once you delete your resources, you will no longer have access to them, and all the data on them will be deleted. Make sure that you have saved everything before you delete your resources.
 
 ``` python
 DELETE = False

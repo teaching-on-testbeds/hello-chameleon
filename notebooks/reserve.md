@@ -17,7 +17,7 @@ In this exercise, we will reserve a resource on Chameleon.
 ::: {.cell .markdown}
 
 ### Generating a Virtual Machine on chameleon
-The below cells will take project_name and exp_name as input from the user to configure the experiment environment.
+Run this cell to initialize the environment, also make sure change the vriable "project_name". project_name looks like "CHI-XXXXX" and it is the name of your project which you were assigned. 
 
 :::
 
@@ -31,6 +31,12 @@ chi.use_site("KVM@TACC")
 ```
 :::
 
+::: {.cell .markdown}
+
+To ensure uniqueness, each server within a project must have a distinct name. To differentiate your servers from those of your peers, the server's name should be composed of your chameleon username and an exp_name that your instructor has specified in the cell provided below.
+
+:::
+
 ::: {.cell .code}
 ```python
 exp_name = ""
@@ -42,36 +48,6 @@ server_name = f"{exp_name}_{user}"
 
 
 ::: {.cell .markdown}
-### Assigning flavor and image_name
-
-
-:::
-
-::: {.cell .markdown}
-Running this cell will show tha available images that could be used in our vm.
-:::
-
-
-::: {.cell .code}
-```python
-%%bash
-openstack image list
-```
-:::
-
-::: {.cell .markdown}
-Select the image which you want to use and assign it to the image_name variable in the cell below. Here we have used CC-Ubuntu20.04 but you can use different according to your need.
-:::
-
-::: {.cell .code}
-```python
-flavor = "m1.small"
-image_name = "CC-Ubuntu20.04"
-
-```
-:::
-
-::: {.cell .markdown}
 
 ### Creating the server
 
@@ -80,7 +56,8 @@ image_name = "CC-Ubuntu20.04"
 ::: {.cell .code}
 ```python
 import chi.server
-
+flavor = "m1.small"
+image_name = "CC-Ubuntu20.04"
 server = chi.server.create_server(server_name, 
                                   image_name=image_name, 
                                   flavor_name=flavor)
@@ -91,11 +68,7 @@ chi.server.wait_for_active(server_id)
 :::
 
 ::: {.cell .markdown}
-### Attaching a floating IP
-
-At KVM@TACC, since there are no reservations, we can easily obtain a floating IP address from the available pool without any prior booking. However, it's crucial to keep in mind that the pool of floating IPs is limited. Therefore, it's advisable to be mindful of your usage and not allocate more floating IPs than necessary, considering the other researchers who also need to utilize them.
-
-In case you require multiple VMs for your experiment, a practical approach is to connect them all on one network. By doing so, you can use a single floating IP to link to a "head" node and access all the other nodes through it.
+Associate an IP address with this server:
 
 :::
 ::: {.cell .code}
@@ -107,15 +80,8 @@ reserved_fip
 
 ::: {.cell .markdown}
 
-### Security groups
-The KVM cloud has a distinctive feature in the form of security groups, which are firewall rules that can be configured through OpenStack and the Horizon dashboard. They offer a hassle-free approach to configure the security of your VM. Although these groups also exist in the bare-metal cloud, they don't serve any purpose there.
-
-By default, all external connections to your VM are blocked. Therefore, to enable remote connections, you will need to assign the "Allow SSH" security group to your VM, which can be found by viewing the list of available groups.
-
-It's important to note that in almost all cases, the "Allow SSH" security group is the ONLY group that you need to assign to your VM.
-
-The cell below make sure that there is an Allow SSH security group created, if there is no such groups it creates one.
-
+### Creating a Security group
+A security group named "Allow SSH" will be generated in the following cell for our project, enabling us to connect to the remote server from our local desktop.
 :::
 
 ::: {.cell .code}
@@ -138,6 +104,12 @@ else
     echo "Security group already exists"
 fi
 ```
+:::
+
+::: {.cell .markdown}
+
+The preceding cell generated a security group, and this cell will attach that security group to our server, making it ready to be accessed via SSH.
+
 :::
 
 ::: {.cell .code}

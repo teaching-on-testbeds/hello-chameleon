@@ -1,8 +1,9 @@
 
 ::: {.cell .markdown}
 ## Exercise: delete resources
-Once you are done using the resources, you can delete them by running the cell below. provide the input as "y" if you want to delete the resource.
+Once you are done using the resources, you can delete them by changing DELETE = True and run the cell below.
 
+Once you delete your resources, you will no longer have access to them, and all the data on them will be deleted. Make sure that you have saved everything before you delete your resources.
 :::
 
 ::: {.cell .code}

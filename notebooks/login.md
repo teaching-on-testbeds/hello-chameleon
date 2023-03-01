@@ -5,58 +5,36 @@
 
 :::
 
-::: {.cell .markdown}
-### Extracting the floating ip that is attached to our server
-
-
-:::
-
-
-::: {.cell .markdown}
-### Logging in over SSH via the jupyter env
-
-
-:::
-
-::: {.cell .code}
-```python
-from chi.ssh import Remote
-
-node = Remote(reserved_fip)
-node.is_connected
-```
-:::
-
-::: {.cell .markdown}
-**Executing terminal commands via notebook**
-
-
-:::
-
-
-::: {.cell .code}
-```python
-node.run('echo "The connection is up"')
-node.run('echo "Hello how are you" > hello.txt')
-```
-:::
-
-
 
 ::: {.cell .markdown}
 ### Logging in over SSH via local terminal
-In a local terminal on your own laptop, run
+Once your server is ready to use. you can follow the guidelines below to log in to your server via SSH.
 
 :::
 
 ::: {.cell .markdown}
-```shell
-user@username:~$ ssh cc@129.114.xxx.xxx
+Run the cell below and use it's output as the exact command to login through your laptop's terminal.
+:::
+
+::: {.cell .code}
+```python
+
+print(f"ssh -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}")
+
 ```
-If your Chameleon key is not in the default location, you should also specify the path to your key as an argument, using -i.
+:::
+
+::: {.cell .markdown}
+
+The first time you log in to each new host, your computer will display a warning similar to the following: 
+
 ```shell
-eg: ssh -i ~/.ssh/id_rsa cc@129.114.xx.xxx 
+The authenticity of host "129.114.26.xx (129.114.26.xx)" cannot be established.
+ED25519 key fingerprint is SHA256:1fcbGrgLDdOeorauhz3CTyhmFqOHsrEWlu0TZ6yGoDM.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
 ```
+and you will have to type the word _yes_ and hit Enter to continue. If you have specified your key path and other details correctly, it won’t ask you for a password when you log in to the node. (It may ask for the passphrase for your private key if you’ve set one.)
 :::
 
 ::: {.cell .markdown}
@@ -87,24 +65,10 @@ cc@cp3793-nyu-edu-fount:~$
 :::
 
 ::: {.cell .markdown}
-Now we have been logged in to our remote host.
-we will run some commands to check the content of current directory
+We will create a file hello.txt on our remote machine.
 
 ```shell
-:~$ ls
-:~$ 
+:~$ echo "Hello from $(hostname)" > hello.txt
 ```
-
-We can see that the root directory is empty.
-
-We will create a directory named chameleon and then create a file hello.txt inside it.
-
-```shell
-:~$ mkdir chameleon
-:~$ cd chameleon
-:~/chameleon$ 
-:~/chameleon$ echo "hello Chameleon" > hello.txt
-:~/chameleon$ 
-```
-We will use the file and directory created in the later exercises where we will see how transfering of file works between remote host and local host.
+Now we will use this file "hello.txt" in the later exercises where we will see how transfering of file works between remote host and local host.
 ::: 
