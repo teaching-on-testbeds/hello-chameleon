@@ -42,7 +42,6 @@ To ensure uniqueness, each server within a project must have a distinct name. To
 exp_name = ""
 user = os.getenv("USER")
 server_name = f"{exp_name}_{user}"
-
 ```
 :::
 

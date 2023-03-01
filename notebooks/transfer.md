@@ -30,7 +30,7 @@ user@username:~$
 
 
 
-Run the code below and you will get the exact command which you have to use in your local terminal
+Run the code below and you will get the exact command which you have to use in your local terminal.
 
 :::
 
@@ -44,7 +44,7 @@ print(f'scp -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}:/home/cc/hello.txt .')
 
 ::: {.cell .markdown}
 
-Now we have transfered hello.txt from remote host to our laptop. Now we can open that file edit it in any of the editor and then try transfering the same to remote host.
+We have successfully transferred "hello.txt" from the remote host to our laptop. We can now open the file in any text editor, make changes as necessary, and then attempt to transfer the updated file back to the remote host.
 
 ```shell
 user@username:~$ scp hello.txt cc@reserved_fip:/home/cc/chameleon/
@@ -52,7 +52,7 @@ hello.txt                       100%    1KB     0.1KB/s   00:00
 user@username:~$
 ```
 
-Run the code below and you will get the exact command which you have to use in your local terminal to transfer the file back to remote host
+Run the code below and you will get the exact command which you have to use in your local terminal to transfer the file back to remote host.
 :::
 
 ::: {.cell .code}
