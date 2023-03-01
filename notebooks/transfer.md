@@ -10,7 +10,7 @@ scp [OPTIONS] SOURCE DESTINATION
 ```
 where SOURCE is the full address of the location where the file is currently llocated, and DESTINATION is the address of the location that you want to copy a file to.
 
-When you are transferring a file from a remote host to your laptop, you will run scp from a terminal on your laptop (NOT a terminal that is logged in to the remote host), and the syntax will look like this:
+When you are transferring a file from a remote host to your laptop, you will run scp from a terminal on your laptop (NOT a terminal that is logged in to the remote host).
 
 :::
 
@@ -18,12 +18,12 @@ When you are transferring a file from a remote host to your laptop, you will run
 
 ### Transfering files through the local terminal
 
-When we logged in through our local environment on the terminal of our laptop, We created a folder "chameleon" and inside the folder we created a file "hello.txt" on the remote host. Here in this exercise we will run a *scp* command to get that file from remote host to our laptop.
+Upon accessing the remote host via our local environment's terminal, we generated a file named "hello.txt". In this exercise, we will execute an "scp" command to transfer the file from the remote host to our laptop.
 
 
 
 ```shell
-user@username:~$ scp -i ~/.ssh/id_rsa_chameleon cc@reserved_fip:/home/cc/chameleon/hello.txt .
+user@username:~$ scp -i ~/.ssh/id_rsa_chameleon cc@reserved_fip:/home/cc/hello.txt .
 hello.txt                       100%    1KB     0.1KB/s   00:00
 user@username:~$
 ```
@@ -37,7 +37,7 @@ Run the code below and you will get the exact command which you have to use in y
 ::: {.cell .code}
 
 ```python
-print(f'scp -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}:/home/cc/chameleon/hello.txt .')
+print(f'scp -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}:/home/cc/hello.txt .')
 
 ```
 :::
@@ -58,7 +58,7 @@ Run the code below and you will get the exact command which you have to use in y
 ::: {.cell .code}
 
 ```python
-print(f'scp -i ~/.ssh/id_rsa_chameleon hello.txt cc@{reserved_fip}:/home/cc/chameleon/')
+print(f'scp -i ~/.ssh/id_rsa_chameleon hello.txt cc@{reserved_fip}:/home/cc/')
 
 ```
 :::
