@@ -294,7 +294,7 @@ Are you sure you want to continue connecting (yes/no/[fingerprint])?
 
 and you will have to type the word *yes* and hit Enter to continue.
 
-If you have specified your key path and other details correctly, it won't ask you for a password when you log in to the node. (It may ask for the passphrase for your private key if you've set one.)
+If you have specified your key path and other details correctly, it won't ask you for a password when you log in to the resource. (It may ask for the passphrase for your private key if you've set one.)
 
 The output of the above command will look somewhat like this.
 
