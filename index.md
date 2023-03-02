@@ -272,7 +272,7 @@ In this exercise, we'll practice running commands on the VM resource by opening 
 To log in to the VM over SSH, you will:
 
 -   open your terminal application,
--   run the cell below, which will give you an SSH login command,
+-   run the cell below, which will print an SSH login command,
 -   copy this command and make any necessary modifications (if needed, as described in the following cell),
 -   paste it into your terminal and hit Enter.
 
@@ -373,7 +373,7 @@ Run the cell below, to generate the `scp` command:
 print(f'scp -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}:/home/cc/hello.txt .')
 ```
 
-Copy this command, and make any changes (e.g. to the key location or name, or to the location in your local filesystem to which the file should be transferred). Then, execute it in your *local* shell. (Note that the `.` at the end is part of the command - don't omit this part!)
+Copy the command that is printed by the cell above, and make any changes if necessary (e.g. to the key location or name, or to the location in your local filesystem to which the file should be transferred). Then, execute it in your *local* shell. (Note that the `.` at the end is part of the command - don't omit this part!)
 
 The output of this command should show that the file is transferred to your local filesystem:
 
@@ -391,9 +391,9 @@ Use the cell below to generate the `scp` command to transfer the file *to* the r
 print(f'scp -i ~/.ssh/id_rsa_chameleon hello.txt cc@{reserved_fip}:/home/cc/')
 ```
 
-Copy this command, and make any changes (e.g. to the key location or name, or to the location in your local filesystem from which the file should be transferred). Then, execute the command in your *local* shell.
+Copy the command that is printed by the cell above, and make any changes (e.g. to the key location or name, or to the location in your local filesystem from which the file should be transferred). Then, execute the command in your *local* shell.
 
-The output of this command should show that the file is transferred to your local filesystem:
+The output of this command should show that the file is transferred to the remote filesystem:
 
 ``` text
 hello.txt                       100%    1KB     0.1KB/s   00:00
@@ -409,7 +409,9 @@ in the SSH session. Verify that your changes appear in the output.
 
 ## Exercise: delete resources
 
-After utilizing the resources, you can remove them by updating the DELETE parameter to True and executing the cell below.
+Chameleon is a shared facility, and it is important to be mindful of your resource usage and to "free" resources for use by other experimenters when you are finished with them.
+
+In the cell below, change `False` to `True`, then run the cell to free the VM and the network address you attached to it.
 
 Note that removing the resources will revoke your access to them, and all the information stored on them will be erased. Therefore, ensure that you have saved all your work before deleting the resources.
 

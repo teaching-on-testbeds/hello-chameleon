@@ -91,7 +91,7 @@ print(f'scp -i ~/.ssh/id_rsa_chameleon hello.txt cc@{reserved_fip}:/home/cc/')
 
 Copy the command that is printed by the cell above, and make any changes (e.g. to the key location or name, or to the location in your local filesystem from which the file should be transferred). Then, execute the command in your *local* shell.
 
-The output of this command should show that the file is transferred to your local filesystem:
+The output of this command should show that the file is transferred to the remote filesystem:
 
 ```text
 hello.txt                       100%    1KB     0.1KB/s   00:00
