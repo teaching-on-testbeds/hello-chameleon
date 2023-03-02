@@ -171,41 +171,51 @@ Then, you can continue this tutorial by executing the cells in the notebook dire
 
 Whenever you run an experiment on Chameleon, you will
 
-1.  Open a Python notebook, which includes commands to reserve the resources (VMs, bare metal servers, or networks) that you need for your experiment. Run these commands.
+1.  Open a Python notebook, which includes commands to reserve and configure the resources (VMs, bare metal servers, or networks) that you need for your experiment. Run these commands.
 2.  Wait until the resources in your experiment are ready to log in.
 3.  Log in to the resources and run your experiment (either by executing commands in the notebook, or by using SSH in a terminal and running commands in those SSH sessions).
 
 Also, when you finish an experiment and have saved all the data somewhere safe, you will *delete* the resources in your experiment to free them for use by other experimenters.
 
-In this exercise, we will reserve a resource on Chameleon.
+In this exercise, we will reserve a single virutal machine on Chameleon, and practice logging in to execute commands on this VM.
 
-### Generating a Virtual Machine on chameleon
+First, we will need to initialize the environment - tell it what Chameleon project to associate our experiment with.
 
-Run this cell to initialize the environment, also make sure change the vriable "project_name". project_name looks like "CHI-XXXXX" and it is the name of your project which you were assigned.
+You should already be a part of a Chameleon project, which has a project ID in the form "CHI-XXXXX". If you don't know your project ID, you can find it by logging in to the Chameleon web portal, and checking your [dashboard](https://chameleoncloud.org/user/dashboard/).
+
+Once you find out *your* project ID, replace the "CHI-XXXXXX" in this next cell with your project ID. Then, run the cell.
 
 ``` python
 import chi,os
-project_name = "CHI-XXXXXX"
-os.environ["OS_PROJECT_NAME"] = project_name
-chi.set("project_name", project_name)  
-chi.use_site("KVM@TACC")
+
+project_id = "CHI-XXXXXX"
+site_name = "KVM@TACC"
+# tell python-chi what project to use, and where
+chi.set("project_name", project_id)  
+chi.use_site(site_name)
+# also set environment variables, for benefit of future commands
+os.environ["OS_PROJECT_NAME"] = project_id
+os.environ["OS_REGION_NAME"] = site_name
 ```
 
-To ensure uniqueness, each server within a project must have a distinct name. To differentiate your servers from those of your peers, the server's name should be composed of your chameleon username and an exp_name that your instructor has specified in the cell provided below.
+Next, we'll give our resource a name. Every resource in a project should have a unique name, so we will include your username and a timestamp, as well as a description of the experiment, in the name.
 
 ``` python
-exp_name = ""
-user = os.getenv("USER")
-server_name = f"{exp_name}_{user}"
+import datetime
+exp_name = "hello_chameleon"
+exp_user = os.getenv("USER")
+exp_start = datetime.datetime.now().strftime("%Y%_m_%d_%H_%M_%S")
+server_name = f"{exp_name}-{exp_user}-{exp_start}"
 ```
 
-### Creating the server
+Now we are ready to ask Chameleon to allocate a resource to us! For a VM, we specify the "flavor" or size of the resource (in terms of CPU, memory, and storage) and the operating system image that we want to have pre-installed.
 
 ``` python
 import chi.server
 flavor = "m1.small"
 image_name = "CC-Ubuntu20.04"
 server = chi.server.create_server(server_name, 
+                                  key_name='id_rsa_chameleon',
                                   image_name=image_name, 
                                   flavor_name=flavor)
 
@@ -213,38 +223,33 @@ server_id = server.id
 chi.server.wait_for_active(server_id)
 ```
 
-Associate an IP address with this server:
+Once the resource is allocated and ready, we will associate a network address to it, so that we can log in to the resource over the Internet using the SSH protocol.
 
 ``` python
 reserved_fip = chi.server.associate_floating_ip(server_id)
 reserved_fip
 ```
 
-### Creating a Security group
-
-A security group named "Allow SSH" will be generated in the following cell for our project, enabling us to connect to the remote server from our local desktop.
+There's one more step before we can log in to the resource - by default, all connections to VM resources are blocked, as a security measure. We will need to add a "security group" that permits SSH connections to our project (if it does not already exist), then attach this security group to our VM resource.
 
 ``` python
 %%bash
 export OS_AUTH_URL=https://kvm.tacc.chameleoncloud.org:5000/v3
-export OS_REGION_NAME="KVM@TACC"
 
 access_token=$(curl -s -H"authorization: token $JUPYTERHUB_API_TOKEN"     "$JUPYTERHUB_API_URL/users/$JUPYTERHUB_USER"     | jq -r .auth_state.access_token)
 export OS_ACCESS_TOKEN="$access_token"
 SECURITY_GROUP_NAME="Allow SSH"
 
 if ! openstack security group show "$SECURITY_GROUP_NAME" > /dev/null 2>&1; then
+    echo "Security group does not exist yet - creating it for you now"
     openstack security group create "$SECURITY_GROUP_NAME"  --description "Enable SSH traffic on TCP port 22"
     openstack security group rule create "$SECURITY_GROUP_NAME" \
      --protocol tcp --dst-port 22:22 --remote-ip 0.0.0.0/0
-
 
 else
     echo "Security group already exists"
 fi
 ```
-
-The preceding cell generated a security group, and this cell will attach that security group to our server, making it ready to be accessed via SSH.
 
 ``` python
 nova_server = chi.nova().servers.get(server_id)
@@ -252,28 +257,33 @@ nova_server.add_security_group("Allow SSH")
 f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
 ```
 
-Wait for the server to be ready to connect.
+That's all we need to do to prepare a resource to log in! Run the following cell - when it returns, it means that the VM resource is ready for you to log in.
 
 ``` python
-server.wait_for_tcp(reserved_fip, port=22)
+chi.server.wait_for_tcp(reserved_fip, port=22)
 ```
-
-Now our resources are reserved and ready to login through SSH
 
 ## Exercise: log in to resources and execute commands
 
-### Logging in over SSH via local terminal
+In this exercise, we'll practice running commands on the VM resource by opening an SSH session in a local terminal and running commands in that session.
 
-Once your server is ready to use. you can follow the guidelines below to log in to your server via SSH.
+### Log in over SSH from local terminal
 
-Run the cell below and use it's output as the exact command to login through your laptop's terminal.
+To log in to the VM over SSH, you will:
+
+-   open your terminal application,
+-   run the cell below, which will give you an SSH login command,
+-   copy this command and make any necessary modifications (if needed, as described in the following cell),
+-   paste it into your terminal and hit Enter.
 
 ``` python
 
 print(f"ssh -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}")
 ```
 
-The first time you log in to each new host, your computer will display a warning similar to the following:
+If your Chameleon key is in a different location, or has a different name, then you may need to modify the `~/.ssh/id_rsa_chameleon` part of this command to point to *your* key.
+
+The first time you log in to each new host, your computer may display a warning similar to the following:
 
 ``` shell
 The authenticity of host "129.114.26.xx (129.114.26.xx)" cannot be established.
@@ -282,7 +292,9 @@ This key is not known by any other names
 Are you sure you want to continue connecting (yes/no/[fingerprint])?
 ```
 
-and you will have to type the word *yes* and hit Enter to continue. If you have specified your key path and other details correctly, it won't ask you for a password when you log in to the node. (It may ask for the passphrase for your private key if you've set one.)
+and you will have to type the word *yes* and hit Enter to continue.
+
+If you have specified your key path and other details correctly, it won't ask you for a password when you log in to the node. (It may ask for the passphrase for your private key if you've set one.)
 
 The output of the above command will look somewhat like this.
 
@@ -293,72 +305,107 @@ Welcome to Ubuntu 20.04.4 LTS (GNU/Linux 5.4.0-124-generic x86_64)
  * Management:     https://landscape.canonical.com
  * Support:        https://ubuntu.com/advantage
 
-  System information as of Thu Feb 23 17:52:13 UTC 2023
-
-  System load:  0.08               Processes:             143
-  Usage of /:   10.5% of 36.90GB   Users logged in:       1
-  Memory usage: 12%                IPv4 address for ens3: 10.56.0.154
-  Swap usage:   0%
+ System information disabled due to load higher than 1.0
 
 
 0 updates can be applied immediately.
 
 
-Last login: Thu Feb 23 16:44:05 2023 from 100.35.242.215
-cc@cp3793-nyu-edu-fount:~$
+The list of available updates is more than a week old.
+To check for new updates run: sudo apt update
+
+Last login: Thu Mar  2 18:21:51 2023
+To run a command as administrator (user "root"), use "sudo <command>".
+See "man sudo_root" for details.
+
+cc@hello-chameleon-XXXXX-2023-3-02-18-18-49:~$ 
 ```
 
-We will create a file hello.txt on our remote machine.
+Let's practice running a command in this remote session. Copy and paste the following command into the SSH terminal, to create a file and populate it with a "hello" message:
 
 ``` shell
-:~$ echo "Hello from $(hostname)" > hello.txt
+echo "Hello from $(hostname)" > hello.txt
 ```
 
-Now we will use this file "hello.txt" in the later exercises where we will see how transfering of file works between remote host and local host.
+then check the file contents:
+
+``` shell
+cat hello.txt
+```
+
+Now we will use this file "hello.txt" in a later exercise, when we want to practice transferring files between the remote host and our own laptop!
 
 ## Exercise: transfer files to and from resources
 
-While working on a remote host we have to transfer files from remote to local and vice versa. To move data back and forth between your laptop and remote system that you access with *ssh*, we can use *scp*. The syntax is:
+While working on a remote host, we will often want to transfer files from the remote host to our local filesystem, or vice versa.
+
+To move data back and forth between your laptop and a remote system that you access with *ssh*, we can use *scp*. The syntax is:
 
 ``` shell
 scp [OPTIONS] SOURCE DESTINATION
 ```
 
-where SOURCE is the full address of the location where the file is currently llocated, and DESTINATION is the address of the location that you want to copy a file to.
-
-When you are transferring a file from a remote host to your laptop, you will run scp from a terminal on your laptop (NOT a terminal that is logged in to the remote host).
+where `SOURCE` is the full address of the location where the file is currently llocated, and `DESTINATION` is the address of the location that you want to copy a file to.
 
 ### Transfering files through the local terminal
 
-Upon accessing the remote host via our local environment's terminal, we generated a file named "hello.txt". In this exercise, we will execute an "scp" command to transfer the file from the remote host to our laptop.
+We previously generated a file on the remote VM, "hello.txt". Now, we'll use `scp` to transfer the file from the remote host to our laptop, make a change to it, then transfer it back.
+
+You will run the `scp` command from your *local* terminal, not on the remote host. If you are still logged in over SSH to the remote host, type
 
 ``` shell
-user@username:~$ scp -i ~/.ssh/id_rsa_chameleon cc@reserved_fip:/home/cc/hello.txt .
-hello.txt                       100%    1KB     0.1KB/s   00:00
-user@username:~$
+exit
 ```
 
-Run the code below and you will get the exact command which you have to use in your local terminal.
+to return to your local terminal. Check the terminal *prompt* and make sure it reflects that you are executing commands at your local terminal, and not on the Chameleon VM.
+
+Then, we'll need to generate an `scp` command to run, including:
+
+-   the location of the key you use to SSH into the remote host, e.g. `~/.ssh/id_rsa_chameleon`
+-   the username you use to SSH into the remote host, `cc` in this case
+-   the IP address or hostname you use to SSH into the remote host
+-   the location of the file you want to copy on the remote host, which is `/home/cc/hello.txt`
+-   and the location on your laptop to which you want to copy the file. We will copy it to the same location from which you run the scp command (`.` is shorthand for "my current working directory"),
+
+Run the cell below, to generate the `scp` command:
 
 ``` python
 print(f'scp -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}:/home/cc/hello.txt .')
 ```
 
-We have successfully transferred "hello.txt" from the remote host to our laptop. We can now open the file in any text editor, make changes as necessary, and then attempt to transfer the updated file back to the remote host.
+Copy this command, and make any changes (e.g. to the key location or name, or to the location in your local filesystem to which the file should be transferred). Then, execute it in your *local* shell. (Note that the `.` at the end is part of the command - don't omit this part!)
 
-``` shell
-user@username:~$ scp hello.txt cc@reserved_fip:/home/cc/chameleon/
+The output of this command should show that the file is transferred to your local filesystem:
+
+``` text
 hello.txt                       100%    1KB     0.1KB/s   00:00
-user@username:~$
 ```
 
-Run the code below and you will get the exact command which you have to use in your local terminal to transfer the file back to remote host.
+When you have successfully transferred "hello.txt" from the remote host to your laptop, locate it in your local filesystem and open it in your preferred text editor. Make a change (any change!) to the file and save it.
+
+Then, we'll transfer it back to the remote host! To transfer it back to the remote host, the `SOURCE` argument will become the location of the file in the local filesystem, and the `DESTINATION` will become the location to which the file should be transferred on the remote VM.
+
+Use the cell below to generate the `scp` command to transfer the file *to* the remote host:
 
 ``` python
 print(f'scp -i ~/.ssh/id_rsa_chameleon hello.txt cc@{reserved_fip}:/home/cc/')
 ```
 
-Use of `-i ~/.ssh/id_rsa_chameleon` is optional if your Chameleon key is in the default location.
+Copy this command, and make any changes (e.g. to the key location or name, or to the location in your local filesystem from which the file should be transferred). Then, execute the command in your *local* shell.
+
+The output of this command should show that the file is transferred to your local filesystem:
+
+``` text
+hello.txt                       100%    1KB     0.1KB/s   00:00
+```
+
+To validate that the changes you made locally are now reflected in the version of the file that is on the remote host, use the SSH command from the previous section to log in to the remote host again, and run
+
+``` shell
+cat hello.txt
+```
+
+in the SSH session. Verify that your changes appear in the output.
 
 ## Exercise: delete resources
 
