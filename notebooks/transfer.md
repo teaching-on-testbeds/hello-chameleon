@@ -4,7 +4,7 @@
 
 While working on a remote host, we will often want to transfer files from the remote host to our local filesystem, or vice versa.
 
-To move data back and forth between your laptop and a remote system that you access with _ssh_, we can use _scp_. The syntax is:
+To move data back and forth between a terminal and a remote system that you access with _ssh_, we can use _scp_. The syntax is:
 
 ```shell
 scp [OPTIONS] SOURCE DESTINATION
@@ -13,6 +13,8 @@ where `SOURCE` is the full address of the location where the file is currently l
 
 
 :::
+
+
 
 ::: {.cell .markdown}
 

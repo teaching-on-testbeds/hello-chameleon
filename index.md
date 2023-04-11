@@ -215,7 +215,6 @@ import chi.server
 flavor = "m1.small"
 image_name = "CC-Ubuntu20.04"
 server = chi.server.create_server(server_name, 
-                                  key_name='id_rsa_chameleon',
                                   image_name=image_name, 
                                   flavor_name=flavor)
 
@@ -257,6 +256,20 @@ nova_server.add_security_group("Allow SSH")
 f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
 ```
 
+By default, the SSH key in the Jupyter environment will be pre-installed on the server, but we also want to install any key(s) that we have uploaded to the KVM@TACC web interface. The following cell will install those keys:
+
+``` python
+import chi, chi.ssh
+# wait for server to be ready to log in
+chi.server.wait_for_tcp(reserved_fip, port=22)
+remote = chi.ssh.Remote(reserved_fip) 
+nova=chi.clients.nova()
+# iterate over all keypairs in this account
+for kp in nova.keypairs.list(): 
+    public_key = nova.keypairs.get(kp.name).public_key 
+    remote.run(f"echo {public_key} >> ~/.ssh/authorized_keys") 
+```
+
 That's all we need to do to prepare a resource to log in! Run the following cell - when it returns, it means that the VM resource is ready for you to log in.
 
 ``` python
@@ -265,19 +278,59 @@ chi.server.wait_for_tcp(reserved_fip, port=22)
 
 ## Exercise: log in to resources and execute commands
 
-In this exercise, we'll practice running commands on the VM resource by opening an SSH session in a local terminal and running commands in that session.
+## Exercise: log in to resources and execute commands
+
+In this exercise, we'll practice running commands on the VM resource in three ways:
+
+-   by opening an SSH session in the terminal inside this Jupyter environment, and running commands in that session,
+-   by opening an SSH session in a local terminal and running commands in that session.
+-   by using the `python-chi` Python interface to execute commands from within this Python notebook.
+
+### Log in over SSH from Jupyter environment
+
+One of the easiest ways to log in to your VM is to open a shell inside the Jupyter environment, and log in over SSH from that shell.
+
+In the Chameleon JupyterHub environment, click File \> New \> Terminal. This will open another tab in the Jupyter environment, with a shell session.
+
+Now, run this cell to get the SSH login command. Copy the output of the cell:
+
+``` python
+print(f"ssh cc@{reserved_fip}")
+```
+
+then switch to your terminal shell tab, paste the SSH login command, and hit Enter.
+
+The first time you log in to each new host, you may see a warning similar to the following:
+
+``` shell
+The authenticity of host "129.114.26.xx (129.114.26.xx)" cannot be established.
+ED25519 key fingerprint is SHA256:1fcbGrgLDdOeorauhz3CTyhmFqOHsrEWlu0TZ6yGoDM.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+```
+
+and you will have to type the word *yes* and hit Enter to continue.
+
+Then, you'll be logged in! To validate that you are logged in to the remote host, and not running commands directly in the Jupyter shell environment, run
+
+``` shell
+hostname
+```
+
+and verify that the output starts with "hello-chameleon". (This is the hostname we assigned to our VM resource!)
 
 ### Log in over SSH from local terminal
 
-To log in to the VM over SSH, you will:
+To log in to the VM over SSH from your local terminal, you will follow a similar process:
 
--   open your terminal application,
+-   open the terminal application *installed on your computer*,
 -   run the cell below, which will print an SSH login command,
 -   copy this command and make any necessary modifications (if needed, as described in the following cell),
 -   paste it into your terminal and hit Enter.
 
-``` python
+In this case, you will specify the key location as part of the SSH command. These instructions assume that, as described in the previous steps, you have created a key pair named `id_rsa_chameleon`, put it in the default `.ssh` subdirectory in your home directory, and uploaded it to the KVM@TACC web interface.
 
+``` python
 print(f"ssh -i ~/.ssh/id_rsa_chameleon cc@{reserved_fip}")
 ```
 
@@ -296,31 +349,6 @@ and you will have to type the word *yes* and hit Enter to continue.
 
 If you have specified your key path and other details correctly, it won't ask you for a password when you log in to the resource. (It may ask for the passphrase for your private key if you've set one.)
 
-The output of the above command will look somewhat like this.
-
-``` shell
-Welcome to Ubuntu 20.04.4 LTS (GNU/Linux 5.4.0-124-generic x86_64)
-
- * Documentation:  https://help.ubuntu.com
- * Management:     https://landscape.canonical.com
- * Support:        https://ubuntu.com/advantage
-
- System information disabled due to load higher than 1.0
-
-
-0 updates can be applied immediately.
-
-
-The list of available updates is more than a week old.
-To check for new updates run: sudo apt update
-
-Last login: Thu Mar  2 18:21:51 2023
-To run a command as administrator (user "root"), use "sudo <command>".
-See "man sudo_root" for details.
-
-cc@hello-chameleon-XXXXX-2023-3-02-18-18-49:~$ 
-```
-
 Let's practice running a command in this remote session. Copy and paste the following command into the SSH terminal, to create a file and populate it with a "hello" message:
 
 ``` shell
@@ -335,11 +363,21 @@ cat hello.txt
 
 Now we will use this file "hello.txt" in a later exercise, when we want to practice transferring files between the remote host and our own laptop!
 
+### Using `python-chi` to execute commands on the remote host
+
+Finally, it's useful to know that we can also execute commands over SSH on the remote instance, directly from a Python notebook! The following cell shows an example, where we run the `hostname` command using the `python-chi` library:
+
+``` python
+import chi.ssh
+remote = chi.ssh.Remote(reserved_fip) 
+remote.run(f"hostname") 
+```
+
 ## Exercise: transfer files to and from resources
 
 While working on a remote host, we will often want to transfer files from the remote host to our local filesystem, or vice versa.
 
-To move data back and forth between your laptop and a remote system that you access with *ssh*, we can use *scp*. The syntax is:
+To move data back and forth between a terminal and a remote system that you access with *ssh*, we can use *scp*. The syntax is:
 
 ``` shell
 scp [OPTIONS] SOURCE DESTINATION

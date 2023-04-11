@@ -67,7 +67,6 @@ import chi.server
 flavor = "m1.small"
 image_name = "CC-Ubuntu20.04"
 server = chi.server.create_server(server_name, 
-                                  key_name='id_rsa_chameleon',
                                   image_name=image_name, 
                                   flavor_name=flavor)
 
@@ -123,6 +122,27 @@ nova_server.add_security_group("Allow SSH")
 f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
 ```
 :::
+
+
+::: {.cell .markdown}
+By default, the SSH key in the Jupyter environment will be pre-installed on the server, but we also want to install any key(s) that we have uploaded to the KVM@TACC web interface. The following cell will install those keys:
+:::
+
+
+::: {.cell .code}
+```python
+import chi, chi.ssh
+# wait for server to be ready to log in
+chi.server.wait_for_tcp(reserved_fip, port=22)
+remote = chi.ssh.Remote(reserved_fip) 
+nova=chi.clients.nova()
+# iterate over all keypairs in this account
+for kp in nova.keypairs.list(): 
+    public_key = nova.keypairs.get(kp.name).public_key 
+    remote.run(f"echo {public_key} >> ~/.ssh/authorized_keys") 
+```
+:::
+
 
 ::: {.cell .markdown}
 
