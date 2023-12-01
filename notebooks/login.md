@@ -2,8 +2,6 @@
 ::: {.cell .markdown}
 ## Exercise: log in to resources and execute commands
 
-## Exercise: log in to resources and execute commands
-
 In this exercise, we'll practice running commands on the VM resource in three ways:
 
 * by opening an SSH session in the terminal inside this Jupyter environment, and running commands in that session,

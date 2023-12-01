@@ -25,16 +25,16 @@ Once you find out *your* project ID, replace the "CHI-XXXXXX" in this next cell 
 
 ::: {.cell .code}
 ```python
-import chi,os
+import openstack, chi, chi.ssh, chi.network, chi.server, os
 
 project_id = "CHI-XXXXXX"
 site_name = "KVM@TACC"
 # tell python-chi what project to use, and where
 chi.set("project_name", project_id)  
 chi.use_site(site_name)
-# also set environment variables, for benefit of future commands
-os.environ["OS_PROJECT_NAME"] = project_id
-os.environ["OS_REGION_NAME"] = site_name
+
+# configure openstacksdk for actions unsupported by python-chi
+os_conn = chi.clients.connection()
 ```
 :::
 
@@ -96,30 +96,18 @@ There's one more step before we can log in to the resource - by default, all con
 
 ::: {.cell .code}
 ```python
-%%bash
-export OS_AUTH_URL=https://kvm.tacc.chameleoncloud.org:5000/v3
+if not os_conn.get_security_group("Allow SSH"):
+    os_conn.create_security_group("Allow SSH", "Enable SSH traffic on TCP port 22")
+    os_conn.create_security_group_rule("Allow SSH", port_range_min=22, port_range_max=22, protocol='tcp', remote_ip_prefix='0.0.0.0/0')
 
-access_token=$(curl -s -H"authorization: token $JUPYTERHUB_API_TOKEN"     "$JUPYTERHUB_API_URL/users/$JUPYTERHUB_USER"     | jq -r .auth_state.access_token)
-export OS_ACCESS_TOKEN="$access_token"
-SECURITY_GROUP_NAME="Allow SSH"
-
-if ! openstack security group show "$SECURITY_GROUP_NAME" > /dev/null 2>&1; then
-    echo "Security group does not exist yet - creating it for you now"
-    openstack security group create "$SECURITY_GROUP_NAME"  --description "Enable SSH traffic on TCP port 22"
-    openstack security group rule create "$SECURITY_GROUP_NAME" \
-     --protocol tcp --dst-port 22:22 --remote-ip 0.0.0.0/0
-
-else
-    echo "Security group already exists"
-fi
+nova_server = chi.nova().servers.get(server_id)
+nova_server.add_security_group("Allow SSH")
+f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
 ```
 :::
 
 ::: {.cell .code}
 ```python
-nova_server = chi.nova().servers.get(server_id)
-nova_server.add_security_group("Allow SSH")
-f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
 ```
 :::
 
@@ -131,7 +119,6 @@ By default, the SSH key in the Jupyter environment will be pre-installed on the 
 
 ::: {.cell .code}
 ```python
-import chi, chi.ssh
 # wait for server to be ready to log in
 chi.server.wait_for_tcp(reserved_fip, port=22)
 remote = chi.ssh.Remote(reserved_fip) 

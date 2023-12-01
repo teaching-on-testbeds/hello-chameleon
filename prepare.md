@@ -33,9 +33,6 @@ Now that you have the software you need, you are ready to set up an account on C
 
 ### Exercise: Create an account
 
-> **Note** 
-> To complete this step, you'll need to know the **Project Name** of the project that you will join. Your instructor or research advisor will tell you the project name to use.
-
 
 First, go to [https://chameleoncloud.org/](https://chameleoncloud.org/) and click on "Log In". 
 
@@ -178,6 +175,7 @@ To continue working on this tutorial, you'll want to get the rest in "notebook" 
 In the Jupyter environment, select File > New > Terminal and in this terminal, run
 
 ```
+cd work
 git clone https://github.com/teaching-on-testbeds/hello-chameleon
 ```
 
