@@ -129,7 +129,7 @@ to print the contents of the public key to your terminal. You will need this in 
 
 Now, we will upload this key to several of the Chameleon sites we are most likely to use: KVM@TACC, CHI@TACC, and CHI@UC. (If you later run an experiment at a Chameleon site not on this list, you'll need to upload this key there, too.)
 
-While logged on to the Chameleon user portal, click on Experiment \> KVM@TACC.
+While logged on to the [Chameleon user portal](https://chameleoncloud.org/), click on Experiment \> KVM@TACC.
 
 Click on the "Key Pairs" option in the Compute menu:
 
@@ -143,9 +143,9 @@ Name your key, set the key type to "SSH key", and then paste the contents of you
 
 Then, click "Import Public Key" to save the key to your profile.
 
-While logged on to the Chameleon user portal, click on Experiment \> CHI@TACC and repeat this step there.
+Return to the [Chameleon user portal](https://chameleoncloud.org/), click on Experiment \> CHI@TACC and repeat this step there.
 
-Then, click on Experiment \> CHI@UC and repeat this step there, too.
+Return to the [Chameleon user portal](https://chameleoncloud.org/), click on Experiment \> CHI@UC and repeat this step there, too.
 
 ### Exercise: Open this notebook in Jupyter
 
