@@ -142,8 +142,6 @@ Finally, it's useful to know that we can also execute commands over SSH on the r
 
 ::: {.cell .code}
 ```python
-import chi.ssh
-remote = chi.ssh.Remote(reserved_fip) 
-remote.run(f"hostname") 
+s.execute(f"hostname") 
 ```
 :::

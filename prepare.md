@@ -74,7 +74,7 @@ If you click on the "Projects" tab in the Chameleon dashboard, you'll see this:
 
 ![Before joining a project.](images/no-project.png)
 
-Tell your instructor that you have created your Chameleon account, and let them know the email address associated with your Chameleon account. Once they have added you to their project, you'll see it listed on that page, and you can continue with the next step.
+If your instructor has given you a "join link", you can use it at this stage to request to join their project. Otherwise, tell your instructor that you have created your Chameleon account, and let them know the email address associated with your Chameleon account. Once they have added you to their project, you'll see it listed on that page, and you can continue with the next step.
 
 
 ### Exercise: Create SSH keys
@@ -166,20 +166,16 @@ Return to the [Chameleon user portal](https://chameleoncloud.org/), click on Exp
 
 ### Exercise: Open this notebook in Jupyter
 
-Once you are part of a Chameleon project, you can reserve resources on Chameleon and access them over SSH! We'll use Chameleon's Jupyter environment for this.
+Once you are part of a Chameleon project, you can reserve resources on Chameleon and access them over SSH! We'll use Chameleon's Jupyter environment for this, and we'll open this notebook using Chameleon's artifact sharing service, Trovi.
 
-From the [Chameleon website](https://chameleoncloud.org/), click on "Experiment > Jupyter Interface" in the menu. You may be prompted to log in again.
+You can access this artifact in two ways:
 
-To continue working on this tutorial, you'll want to get the rest in "notebook" form.
+* Open it directly from this link: [Hello, Chameleon on Trovi](https://chameleoncloud.org/experiment/share/a10a1b51-51d7-4c6e-ba83-010a5cf759d6)
+* From the [Chameleon website](https://chameleoncloud.org/), click on "Experiment > Trovi" in the menu. Search for "Hello, Chameleon".
 
-In the Jupyter environment, select File > New > Terminal and in this terminal, run
+Then, click "Launch on Chameleon". This will start a new Jupyter server for you, with the experiment materials already in it.
 
-```
-cd work
-git clone https://github.com/teaching-on-testbeds/hello-chameleon
-```
-
-Then, in the file browser on the left side, open the `hello-chameleon` directory and then double-click on the `hello_chameleon.ipynb` notebook to open it.
+In the file browser on the left side, open the `hello-chameleon` directory and then double-click on the `hello_chameleon.ipynb` notebook to open it.
 
 If you are prompted about a choice of kernel, you can accept the Python3 kernel.
 

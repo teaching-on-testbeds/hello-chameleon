@@ -66,7 +66,7 @@ If you click on the "Projects" tab in the Chameleon dashboard, you'll see this:
 
 ![Before joining a project.](images/no-project.png)
 
-Tell your instructor that you have created your Chameleon account, and let them know the email address associated with your Chameleon account. Once they have added you to their project, you'll see it listed on that page, and you can continue with the next step.
+If your instructor has given you a "join link", you can use it at this stage to request to join their project. Otherwise, tell your instructor that you have created your Chameleon account, and let them know the email address associated with your Chameleon account. Once they have added you to their project, you'll see it listed on that page, and you can continue with the next step.
 
 ### Exercise: Create SSH keys
 
@@ -149,18 +149,16 @@ Return to the [Chameleon user portal](https://chameleoncloud.org/), click on Exp
 
 ### Exercise: Open this notebook in Jupyter
 
-Once you are part of a Chameleon project, you can reserve resources on Chameleon and access them over SSH! We'll use Chameleon's Jupyter environment for this.
+Once you are part of a Chameleon project, you can reserve resources on Chameleon and access them over SSH! We'll use Chameleon's Jupyter environment for this, and we'll open this notebook using Chameleon's artifact sharing service, Trovi.
 
-From the [Chameleon website](https://chameleoncloud.org/), click on "Experiment \> Jupyter Interface" in the menu. You may be prompted to log in again.
+You can access this artifact in two ways:
 
-To continue working on this tutorial, you'll want to get the rest in "notebook" form.
+-   Open it directly from this link: [Hello, Chameleon on Trovi](https://chameleoncloud.org/experiment/share/a10a1b51-51d7-4c6e-ba83-010a5cf759d6)
+-   From the [Chameleon website](https://chameleoncloud.org/), click on "Experiment \> Trovi" in the menu. Search for "Hello, Chameleon".
 
-In the Jupyter environment, select File \> New \> Terminal and in this terminal, run
+Then, click "Launch on Chameleon". This will start a new Jupyter server for you, with the experiment materials already in it.
 
-    cd work
-    git clone https://github.com/teaching-on-testbeds/hello-chameleon
-
-Then, in the file browser on the left side, open the `hello-chameleon` directory and then double-click on the `hello_chameleon.ipynb` notebook to open it.
+In the file browser on the left side, open the `hello-chameleon` directory and then double-click on the `hello_chameleon.ipynb` notebook to open it.
 
 If you are prompted about a choice of kernel, you can accept the Python3 kernel.
 
@@ -176,56 +174,59 @@ Whenever you run an experiment on Chameleon, you will
 
 Also, when you finish an experiment and have saved all the data somewhere safe, you will *delete* the resources in your experiment to free them for use by other experimenters.
 
-In this exercise, we will reserve a single virutal machine on Chameleon, and practice logging in to execute commands on this VM.
+In this exercise, we will reserve a single virtual machine on Chameleon, and practice logging in to execute commands on this VM.
 
 First, we will need to initialize the environment - tell it what Chameleon project to associate our experiment with.
 
-You should already be a part of a Chameleon project, which has a project ID in the form "CHI-XXXXX". If you don't know your project ID, you can find it by logging in to the Chameleon web portal, and checking your [dashboard](https://chameleoncloud.org/user/dashboard/).
+You should already be a part of a Chameleon project, which has a project ID in the form "CHI-XXXXX". If you don't know your project ID, you can find it by logging in to the Chameleon web portal, and checking your [dashboard](https://chameleoncloud.org/user/dashboard/). When you run the next cell, you will see a drop-down menu for selecting your project.
 
-Once you find out *your* project ID, replace the "CHI-XXXXXX" in this next cell with your project ID. Then, run the cell.
+We will also indicate which Chameleon site we want to use. Since this experiment uses a virtual machine, the site will be KVM@TACC - the only Chameleon site that supports VMs.
 
 ``` python
-import openstack, chi, chi.ssh, chi.network, chi.server, os
+import chi, os, time, datetime
+from chi import lease
+from chi import server
+from chi import context
+from chi import hardware
 
-project_id = "CHI-XXXXXX"
-site_name = "KVM@TACC"
-# tell python-chi what project to use, and where
-chi.set("project_name", project_id)  
-chi.use_site(site_name)
+context.version = "1.0" 
+context.choose_project()
+context.choose_site(default="KVM@TACC")
+username = os.getenv('USER') # all exp resources will have this suffix
 
 # configure openstacksdk for actions unsupported by python-chi
 os_conn = chi.clients.connection()
 ```
 
-Next, we'll give our resource a name. Every resource in a project should have a unique name, so we will include your username and a timestamp, as well as a description of the experiment, in the name.
+Next, we'll give our resource a name. Every resource in a project should have a unique name, so we will include a username, as well as a description of the experiment, in the name.
 
 ``` python
-import datetime
 exp_name = "hello_chameleon"
-exp_user = os.getenv("USER")
-exp_start = datetime.datetime.now().strftime("%Y%_m_%d_%H_%M_%S")
-server_name = f"{exp_name}-{exp_user}-{exp_start}"
+server_name = f"{exp_name}_{username}"
 ```
 
 Now we are ready to ask Chameleon to allocate a resource to us! For a VM, we specify the "flavor" or size of the resource (in terms of CPU, memory, and storage) and the operating system image that we want to have pre-installed.
 
 ``` python
-import chi.server
-flavor = "m1.small"
-image_name = "CC-Ubuntu20.04"
-server = chi.server.create_server(server_name, 
-                                  image_name=image_name, 
-                                  flavor_name=flavor)
-
-server_id = server.id
-chi.server.wait_for_active(server_id)
+flavor_name = "m1.small"
+image_name = "CC-Ubuntu24.04"
+s = server.Server(
+    name=server_name,
+    image_name=image_name,
+    flavor_name=flavor_name
+)
+s.submit(idempotent=True)
 ```
 
 Once the resource is allocated and ready, we will associate a network address to it, so that we can log in to the resource over the Internet using the SSH protocol.
 
 ``` python
-reserved_fip = chi.server.associate_floating_ip(server_id)
-reserved_fip
+s.associate_floating_ip()
+```
+
+``` python
+reserved_fip = s.get_floating_ip()
+print(reserved_fip)
 ```
 
 There's one more step before we can log in to the resource - by default, all connections to VM resources are blocked, as a security measure. We will need to add a "security group" that permits SSH connections to our project (if it does not already exist), then attach this security group to our VM resource.
@@ -235,31 +236,15 @@ if not os_conn.get_security_group("Allow SSH"):
     os_conn.create_security_group("Allow SSH", "Enable SSH traffic on TCP port 22")
     os_conn.create_security_group_rule("Allow SSH", port_range_min=22, port_range_max=22, protocol='tcp', remote_ip_prefix='0.0.0.0/0')
 
-nova_server = chi.nova().servers.get(server_id)
+nova_server = chi.nova().servers.get(s.id)
 nova_server.add_security_group("Allow SSH")
 f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
-```
-
-``` python
-```
-
-By default, the SSH key in the Jupyter environment will be pre-installed on the server, but we also want to install any key(s) that we have uploaded to the KVM@TACC web interface. The following cell will install those keys:
-
-``` python
-# wait for server to be ready to log in
-chi.server.wait_for_tcp(reserved_fip, port=22)
-remote = chi.ssh.Remote(reserved_fip) 
-nova=chi.clients.nova()
-# iterate over all keypairs in this account
-for kp in nova.keypairs.list(): 
-    public_key = nova.keypairs.get(kp.name).public_key 
-    remote.run(f"echo {public_key} >> ~/.ssh/authorized_keys") 
 ```
 
 That's all we need to do to prepare a resource to log in! Run the following cell - when it returns, it means that the VM resource is ready for you to log in.
 
 ``` python
-chi.server.wait_for_tcp(reserved_fip, port=22)
+s.check_connectivity()
 ```
 
 ## Exercise: log in to resources and execute commands
@@ -352,9 +337,7 @@ Now we will use this file "hello.txt" in a later exercise, when we want to pract
 Finally, it's useful to know that we can also execute commands over SSH on the remote instance, directly from a Python notebook! The following cell shows an example, where we run the `hostname` command using the `python-chi` library:
 
 ``` python
-import chi.ssh
-remote = chi.ssh.Remote(reserved_fip) 
-remote.run(f"hostname") 
+s.execute(f"hostname") 
 ```
 
 ## Exercise: transfer files to and from resources
@@ -433,17 +416,12 @@ in the SSH session. Verify that your changes appear in the output.
 
 Chameleon is a shared facility, and it is important to be mindful of your resource usage and to "free" resources for use by other experimenters when you are finished with them.
 
-In the cell below, change `False` to `True`, then run the cell to free the VM and the network address you attached to it.
+In the cell below, uncomment the line of code, then run the cell to free the VM and the network address you attached to it.
 
 Note that removing the resources will revoke your access to them, and all the information stored on them will be erased. Therefore, ensure that you have saved all your work before deleting the resources.
 
 ``` python
-DELETE = False
-
-if DELETE:
-    chi.server.delete_server(server_id)
-    ip_details = chi.network.get_floating_ip(reserved_fip)
-    chi.neutron().delete_floatingip(ip_details["id"])
+# s.delete()
 ```
 <hr>
 
