@@ -193,9 +193,6 @@ context.version = "1.0"
 context.choose_project()
 context.choose_site(default="KVM@TACC")
 username = os.getenv('USER') # all exp resources will have this suffix
-
-# configure openstacksdk for actions unsupported by python-chi
-os_conn = chi.clients.connection()
 ```
 
 Next, we'll give our resource a name. Every resource in a project should have a unique name, so we will include a username, as well as a description of the experiment, in the name.
@@ -232,6 +229,9 @@ print(reserved_fip)
 There's one more step before we can log in to the resource - by default, all connections to VM resources are blocked, as a security measure. We will need to add a "security group" that permits SSH connections to our project (if it does not already exist), then attach this security group to our VM resource.
 
 ``` python
+# configure openstacksdk for actions unsupported by python-chi
+os_conn = chi.clients.connection()
+
 if not os_conn.get_security_group("Allow SSH"):
     os_conn.create_security_group("Allow SSH", "Enable SSH traffic on TCP port 22")
     os_conn.create_security_group_rule("Allow SSH", port_range_min=22, port_range_max=22, protocol='tcp', remote_ip_prefix='0.0.0.0/0')

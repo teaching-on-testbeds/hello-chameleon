@@ -37,9 +37,6 @@ context.version = "1.0"
 context.choose_project()
 context.choose_site(default="KVM@TACC")
 username = os.getenv('USER') # all exp resources will have this suffix
-
-# configure openstacksdk for actions unsupported by python-chi
-os_conn = chi.clients.connection()
 ```
 :::
 
@@ -104,6 +101,9 @@ There's one more step before we can log in to the resource - by default, all con
 
 ::: {.cell .code}
 ```python
+# configure openstacksdk for actions unsupported by python-chi
+os_conn = chi.clients.connection()
+
 if not os_conn.get_security_group("Allow SSH"):
     os_conn.create_security_group("Allow SSH", "Enable SSH traffic on TCP port 22")
     os_conn.create_security_group_rule("Allow SSH", port_range_min=22, port_range_max=22, protocol='tcp', remote_ip_prefix='0.0.0.0/0')
