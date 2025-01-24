@@ -427,6 +427,14 @@ Note that removing the resources will revoke your access to them, and all the in
 ``` python
 # s.delete()
 ```
+
+Alternatively, you can delete your instace using the GUI:
+
+-   From the [Chameleon website](https://chameleoncloud.org/), click on "Experiment \> KVM@TACC" in the menu (since that is the site that our instance is on).
+-   Select "Instances" from the menu on the left side.
+-   Find your instance in the list. If the project that you are part of has many instances, you can filter by name to make it easier to find yours: change the filter criteria to "Instance Name", put part of your instance name in the text input field, and click "Filter".
+-   Check the box next to *your* instance (make sure not to select someone else's!)
+-   and press the red "Delete Instances" button.
 <hr>
 
 <small>Questions about this material? Contact Fraida Fund</small>
