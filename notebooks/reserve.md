@@ -49,7 +49,7 @@ Next, we'll give our resource a name. Every resource in a project should have a 
 ::: {.cell .code}
 ```python
 exp_name = "hello_chameleon"
-server_name = f"{exp_name}_{username}"
+server_name = f"{exp_name}-{username}"
 ```
 :::
 
@@ -104,12 +104,12 @@ There's one more step before we can log in to the resource - by default, all con
 # configure openstacksdk for actions unsupported by python-chi
 os_conn = chi.clients.connection()
 
-if not os_conn.get_security_group("Allow SSH"):
-    os_conn.create_security_group("Allow SSH", "Enable SSH traffic on TCP port 22")
-    os_conn.create_security_group_rule("Allow SSH", port_range_min=22, port_range_max=22, protocol='tcp', remote_ip_prefix='0.0.0.0/0')
+if not os_conn.get_security_group("allow-ssh"):
+    os_conn.create_security_group("allow-ssh", "Enable SSH traffic on TCP port 22")
+    os_conn.create_security_group_rule("allow-ssh", port_range_min=22, port_range_max=22, protocol='tcp', remote_ip_prefix='0.0.0.0/0')
 
 nova_server = chi.nova().servers.get(s.id)
-nova_server.add_security_group("Allow SSH")
+nova_server.add_security_group("allow-ssh")
 f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
 ```
 :::
