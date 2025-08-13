@@ -1,5 +1,7 @@
 <hr>
 
+<small>Last updated: August 2025, to add a reservation step now that KVM@TACC requires it.</small>
+
 <small>Questions about this material? Contact Fraida Fund</small>
 
 <hr>

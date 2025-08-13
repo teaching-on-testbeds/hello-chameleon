@@ -32,6 +32,7 @@ from chi import lease
 from chi import server
 from chi import context
 from chi import hardware
+from chi import network
 
 context.version = "1.0" 
 context.choose_project()
@@ -50,6 +51,7 @@ Next, we'll give our resource a name. Every resource in a project should have a 
 ```python
 exp_name = "hello_chameleon"
 server_name = f"{exp_name}-{username}"
+lease_name = f"{exp_name}-{username}"
 ```
 :::
 
@@ -60,6 +62,36 @@ Now we are ready to ask Chameleon to allocate a resource to us! For a VM, we spe
 
 :::
 
+::: {.cell .markdown}
+
+First we will reserve the VM instance for 6 hours, starting now:
+
+:::
+
+
+::: {.cell .code}
+```python
+l = lease.Lease(lease_name, duration=datetime.timedelta(hours=6))
+l.add_flavor_reservation(id=chi.server.get_flavor_id("m1.small"), amount=1)
+l.submit(idempotent=True)
+```
+:::
+
+
+::: {.cell .code}
+```python
+l.show()
+```
+:::
+
+
+::: {.cell .markdown}
+
+then we can launch it:
+
+:::
+
+
 ::: {.cell .code}
 ```python
 flavor_name = "m1.small"
@@ -67,7 +99,7 @@ image_name = "CC-Ubuntu24.04"
 s = server.Server(
     name=server_name,
     image_name=image_name,
-    flavor_name=flavor_name
+    flavor_name=l.get_reserved_flavors()[0].name
 )
 s.submit(idempotent=True)
 ```
@@ -101,16 +133,14 @@ There's one more step before we can log in to the resource - by default, all con
 
 ::: {.cell .code}
 ```python
-# configure openstacksdk for actions unsupported by python-chi
-os_conn = chi.clients.connection()
-
-if not os_conn.get_security_group("allow-ssh"):
-    os_conn.create_security_group("allow-ssh", "Enable SSH traffic on TCP port 22")
-    os_conn.create_security_group_rule("allow-ssh", port_range_min=22, port_range_max=22, protocol='tcp', remote_ip_prefix='0.0.0.0/0')
-
-nova_server = chi.nova().servers.get(s.id)
-nova_server.add_security_group("allow-ssh")
-f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
+sg_list = network.list_security_groups(name_filter="allow-ssh")
+if sg_list: # allow-ssh already exists
+    sg = sg_list[0]
+else:       # create allow-ssh
+    sg = network.SecurityGroup({"name": "allow-ssh", "description": "Enable SSH traffic on TCP port 22"})
+    sg.add_rule("ingress", "tcp", 22)
+    sg.submit()
+s.add_security_group(sg.id)
 ```
 :::
 

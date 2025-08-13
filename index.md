@@ -188,6 +188,7 @@ from chi import lease
 from chi import server
 from chi import context
 from chi import hardware
+from chi import network
 
 context.version = "1.0" 
 context.choose_project()
@@ -200,9 +201,24 @@ Next, we'll give our resource a name. Every resource in a project should have a 
 ``` python
 exp_name = "hello_chameleon"
 server_name = f"{exp_name}-{username}"
+lease_name = f"{exp_name}-{username}"
 ```
 
 Now we are ready to ask Chameleon to allocate a resource to us! For a VM, we specify the "flavor" or size of the resource (in terms of CPU, memory, and storage) and the operating system image that we want to have pre-installed.
+
+First we will reserve the VM instance for 6 hours, starting now:
+
+``` python
+l = lease.Lease(lease_name, duration=datetime.timedelta(hours=6))
+l.add_flavor_reservation(id=chi.server.get_flavor_id("m1.small"), amount=1)
+l.submit(idempotent=True)
+```
+
+``` python
+l.show()
+```
+
+then we can launch it:
 
 ``` python
 flavor_name = "m1.small"
@@ -210,7 +226,7 @@ image_name = "CC-Ubuntu24.04"
 s = server.Server(
     name=server_name,
     image_name=image_name,
-    flavor_name=flavor_name
+    flavor_name=l.get_reserved_flavors()[0].name
 )
 s.submit(idempotent=True)
 ```
@@ -229,16 +245,14 @@ print(reserved_fip)
 There's one more step before we can log in to the resource - by default, all connections to VM resources are blocked, as a security measure. We will need to add a "security group" that permits SSH connections to our project (if it does not already exist), then attach this security group to our VM resource.
 
 ``` python
-# configure openstacksdk for actions unsupported by python-chi
-os_conn = chi.clients.connection()
-
-if not os_conn.get_security_group("allow-ssh"):
-    os_conn.create_security_group("allow-ssh", "Enable SSH traffic on TCP port 22")
-    os_conn.create_security_group_rule("allow-ssh", port_range_min=22, port_range_max=22, protocol='tcp', remote_ip_prefix='0.0.0.0/0')
-
-nova_server = chi.nova().servers.get(s.id)
-nova_server.add_security_group("allow-ssh")
-f"updated security groups: {[group.name for group in nova_server.list_security_group()]}"
+sg_list = network.list_security_groups(name_filter="allow-ssh")
+if sg_list: # allow-ssh already exists
+    sg = sg_list[0]
+else:       # create allow-ssh
+    sg = network.SecurityGroup({"name": "allow-ssh", "description": "Enable SSH traffic on TCP port 22"})
+    sg.add_rule("ingress", "tcp", 22)
+    sg.submit()
+s.add_security_group(sg.id)
 ```
 
 That's all we need to do to prepare a resource to log in! Run the following cell - when it returns, it means that the VM resource is ready for you to log in.
@@ -436,6 +450,8 @@ Alternatively, you can delete your instace using the GUI:
 -   Check the box next to *your* instance (make sure not to select someone else's!)
 -   and press the red "Delete Instances" button.
 <hr>
+
+<small>Last updated: August 2025, to add a reservation step now that KVM@TACC requires it.</small>
 
 <small>Questions about this material? Contact Fraida Fund</small>
 
