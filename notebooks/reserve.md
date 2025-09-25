@@ -94,7 +94,6 @@ then we can launch it:
 
 ::: {.cell .code}
 ```python
-flavor_name = "m1.small"
 image_name = "CC-Ubuntu24.04"
 s = server.Server(
     name=server_name,
