@@ -46,7 +46,7 @@ then switch to your terminal shell tab, paste the SSH login command, and hit Ent
 ::: {.cell .markdown}
 The first time you log in to each new host, you may see a warning similar to the following: 
 
-```shell
+```text
 The authenticity of host "129.114.26.xx (129.114.26.xx)" cannot be established.
 ED25519 key fingerprint is SHA256:1fcbGrgLDdOeorauhz3CTyhmFqOHsrEWlu0TZ6yGoDM.
 This key is not known by any other names
